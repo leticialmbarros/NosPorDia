@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. General Safety Net: Catch-all Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- HELPER FUNCTIONS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Guard to prevent ID poisoning and overly large key strings
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Enforce data shapes for CalendarEvent
+    function isValidCalendarEvent(data) {
+      return data.title is string 
+        && data.title.size() >= 1 
+        && data.title.size() <= 150
+        && data.description is string 
+        && data.description.size() <= 1000
+        && data.date is string 
+        && data.date.size() == 10 // YYYY-MM-DD
+        && (!('endDate' in data) || data.endDate == null || (data.endDate is string && data.endDate.size() == 10))
+        && (!('imageUrl' in data) || data.imageUrl == null || data.imageUrl is string)
+        && data.category is string
+        && (data.category == 'Conchinha de Manutenção' 
+            || data.category == 'Date de Exploração' 
+            || data.category == 'Casa da Mãe - SM' 
+            || data.category == 'Compromissos de Trabalho' 
+            || data.category == 'Outros')
+        && data.isRecurring is bool
+        && (data.recurringDays == null || (data.recurringDays is int && data.recurringDays > 0))
+        && data.creator is string
+        && data.creator.size() >= 1
+        && data.creator.size() <= 50;
+    }
+
+    // Enforce data shapes for PostIt
+    function isValidPostIt(data) {
+      return data.text is string 
+        && data.text.size() >= 1 
+        && data.text.size() <= 500
+        && data.author is string 
+        && data.author.size() >= 1 
+        && data.author.size() <= 50
+        && data.slotIndex is int 
+        && data.slotIndex >= 0 
+        && data.slotIndex <= 5;
+    }
+
+    // --- RULES ---
+
+    // Calendar Events
+    match /events/{eventId} {
+      allow read: if true; // Allows any authenticated or visitor to read the shared calendar
+      allow create: if isValidId(eventId) 
+        && isValidCalendarEvent(incoming())
+        && incoming().createdAt is string;
+      allow update: if isValidId(eventId) 
+        && isValidCalendarEvent(incoming())
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(eventId);
+    }
+
+    // Post-Its (exactly 6 spots controlled in-app by slotIndex 0..5)
+    match /postits/{postitId} {
+      allow read: if true;
+      allow create: if isValidId(postitId)
+        && isValidPostIt(incoming())
+        && incoming().createdAt is string;
+      allow update: if isValidId(postitId)
+        && isValidPostIt(incoming());
+      allow delete: if isValidId(postitId);
+    }
+
+    // Ocitocina Pulses (realtime peer-to-peer connection system)
+    match /pulses/{pulseId} {
+      allow read: if true;
+      allow write: if isValidId(pulseId);
+    }
+  }
+}

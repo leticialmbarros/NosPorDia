@@ -1,0 +1,6 @@
+{
+  "name": "NósPorDia",
+  "description": "Um calendário compartilhado elegante inspirado em química e farmacologia para duas pessoas organizarem compromissos, viagens e deixarem mensagens de carinho (Post-its).",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "CalendarEvent": {
+      "title": "CalendarEvent",
+      "description": "Compromissos, viagens e tarefas compartilhadas do casal.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Título do evento ou compromisso."
+        },
+        "description": {
+          "type": "string",
+          "description": "Descrição detalhada opcional."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Data do evento no formato YYYY-MM-DD."
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Optional end date for multi-day range format YYYY-MM-DD."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Conchinha de Manutenção",
+            "Date de Exploração",
+            "Casa da Mãe - SM",
+            "Compromissos de Trabalho",
+            "Outros"
+          ],
+          "description": "Categoria do compromisso que herda uma identidade de cor."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Optional photo for Date events stored on client uploaded path."
+        },
+        "isRecurring": {
+          "type": "boolean",
+          "description": "Se o evento se repete periodicamente."
+        },
+        "recurringDays": {
+          "type": "number",
+          "description": "Intervalo de recorrência medido em dias (ex: 14 para quinzenal)."
+        },
+        "creator": {
+          "type": "string",
+          "description": "Nome da pessoa que cadastrou o evento."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Registros de data de inserção."
+        }
+      },
+      "required": ["title", "date", "category", "isRecurring", "creator", "createdAt"]
+    },
+    "PostIt": {
+      "title": "PostIt",
+      "description": "Mensagens curtas fixadas na lateral representadas por post-its coloridos.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Conteúdo de texto livre da mensagem de carinho ou aviso."
+        },
+        "author": {
+          "type": "string",
+          "description": "Autor do recado."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data de fixação do post-it."
+        },
+        "slotIndex": {
+          "type": "number",
+          "description": "O índice numérico (0 a 5) representando os seis slots fixos de visualização simultânea."
+        }
+      },
+      "required": ["text", "author", "createdAt", "slotIndex"]
+    }
+  },
+  "firestore": {
+    "events/{entityId}": {
+      "schema": "CalendarEvent",
+      "description": "Collection de compromissos e viagens dinâmicas exibidas no calendário."
+    },
+    "postits/{entityId}": {
+      "schema": "PostIt",
+      "description": "Collection para exatamente 6 post-its virtuais simulando recados afetivos rápidos."
+    }
+  }
+}

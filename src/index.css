@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Sacramento&family=Dancing+Script:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Lora", Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-cursive: "Sacramento", cursive;
+  --font-handwritten: "Dancing Script", cursive;
+}
+
+/* Custom scrollbar to look like fine vintage binder journal */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(180, 160, 120, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(180, 160, 120, 0.4);
+}
+
+/* Custom CSS Animations for the chemistry and music laboratories */
+@keyframes music-wave {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1.1); }
+}
+
+.animate-music-wave-1 {
+  animation: music-wave 1s ease-in-out infinite;
+  transform-origin: bottom;
+}
+.animate-music-wave-2 {
+  animation: music-wave 0.7s ease-in-out infinite;
+  transform-origin: bottom;
+  animation-delay: 0.15s;
+}
+.animate-music-wave-3 {
+  animation: music-wave 1.3s ease-in-out infinite;
+  transform-origin: bottom;
+  animation-delay: 0.3s;
+}
+.animate-music-wave-4 {
+  animation: music-wave 0.9s ease-in-out infinite;
+  transform-origin: bottom;
+  animation-delay: 0.45s;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 15s linear infinite;
+}
