@@ -224,7 +224,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-[11px] font-mono text-slate-400">
           <div className="flex items-center gap-2">
             <Atom size={12} className="text-amber-500" />
-            <span>C₂₁H₂₀O₆ é uma molécula fácil de explicar, a gente nem tanto.</span>
+            <span>C<sub>21</sub>H<sub>20</sub>O<sub>6</sub> é uma molécula fácil de explicar, a gente nem tanto.</span>
           </div>
           <div>
             <span>nóspordia &bull; 2026 &bull; Sintonização Estável</span>
