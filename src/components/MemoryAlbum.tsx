@@ -126,11 +126,11 @@ export const MemoryAlbum: React.FC<MemoryAlbumProps> = ({ events }) => {
 
               {/* Custom Cursive Caption Area (Reference to cursive aesthetic) */}
               <div className="mt-4 text-center space-y-1 px-1">
-                <h4 className="font-handwritten text-lg font-bold text-rose-600 capitalize tracking-wide leading-tight line-clamp-1">
+                <h4 className="font-handwritten text-lg font-bold text-rose-600 capitalize tracking-wide leading-tight break-words">
                   {item.title.toLowerCase()}
                 </h4>
                 
-                <p className="text-[10.5px] text-stone-700 leading-snug line-clamp-2 italic h-7 font-bold">
+                <p className="text-[11.5px] text-stone-700 leading-relaxed italic break-words py-1 font-bold">
                   "{item.description || 'Pelo menos a temperatura corpórea esteve muito alta de carinho.'}"
                 </p>
 
