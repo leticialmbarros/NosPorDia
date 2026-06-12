@@ -103,7 +103,7 @@ export const CriandoReacoes: React.FC<CriandoReacoesProps> = ({ currentProfile }
 
   // Initialize the three containers specifically matching the user's Spotify dedications!
   const [songs, setSongs] = useState<HiddenSong[]>(() => {
-    const saved = localStorage.getItem('curcumina_reactions_songs_v3');
+    const saved = localStorage.getItem('curcumina_reactions_songs_v4');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -141,7 +141,7 @@ export const CriandoReacoes: React.FC<CriandoReacoesProps> = ({ currentProfile }
           bg: 'bg-indigo-50/50',
           border: 'border-indigo-200/90',
           accent: 'indigo',
-          text: 'text-indigo-800',
+          text: 'text-indigo-850',
         },
       },
       {
@@ -150,8 +150,8 @@ export const CriandoReacoes: React.FC<CriandoReacoesProps> = ({ currentProfile }
         description: 'Desperta risadas bobas, sintonia farmacológica ideal e energia térmica para novos roteiros.',
         reagentName: 'Agitar Intensamente',
         reagentIcon: 'shake',
-        defaultTitle: 'De Janeiro a Janeiro - Roberta Campos',
-        defaultUrl: 'https://open.spotify.com/embed/track/4f7phfIoOpIhSI8tIK11f6?utm_source=generator',
+        defaultTitle: 'Se Joga Na Minha Vida',
+        defaultUrl: 'https://open.spotify.com/embed/track/6gKVvN4rex186vmhxGzHBt?utm_source=generator',
         colorTheme: {
           liquid: 'bg-amber-500/85',
           bg: 'bg-amber-50/55',
@@ -193,7 +193,7 @@ export const CriandoReacoes: React.FC<CriandoReacoesProps> = ({ currentProfile }
 
   // Persist customized links
   useEffect(() => {
-    localStorage.setItem('curcumina_reactions_songs_v3', JSON.stringify(songs));
+    localStorage.setItem('curcumina_reactions_songs_v4', JSON.stringify(songs));
   }, [songs]);
 
   // Persist completed states so chemistry stays fused across session refreshes!

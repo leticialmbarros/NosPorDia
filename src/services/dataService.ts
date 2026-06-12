@@ -450,6 +450,7 @@ export const dataService = {
           title: newEvent.title,
           description: newEvent.description,
           date: newEvent.date,
+          endDate: newEvent.endDate || null,
           category: newEvent.category,
           isRecurring: newEvent.isRecurring,
           recurringDays: newEvent.recurringDays || null,
@@ -471,11 +472,15 @@ export const dataService = {
     if (isFirebaseConfigured && db) {
       try {
         const ref = doc(db, 'events', id);
-        // Clean undefined or opt keys
+        // Clean undefined or opt keys, clear explicitly optional ones on server as null
         const cleaned: Record<string, any> = {};
         Object.entries(updatedFields).forEach(([k, v]) => {
           if (v !== undefined) {
             cleaned[k] = v;
+          } else {
+            if (k === 'imageUrl' || k === 'endDate' || k === 'recurringDays') {
+              cleaned[k] = null;
+            }
           }
         });
         await updateDoc(ref, cleaned);
