@@ -26,10 +26,15 @@
         "category": {
           "type": "string",
           "enum": [
-            "Conchinha de Manutenção",
-            "Date de Exploração",
-            "Casa da Mãe - SM",
+            "Conchinhas de Manutenção",
+            "Dates de Exploração",
+            "Hasta Home - SM",
             "Compromissos de Trabalho",
+            "Saúde&Autocuidado",
+            "Momentos Solo",
+            "Dates em Casa",
+            "Viagens & Aventuras",
+            "Rolês com Amigos & Família",
             "Outros"
           ],
           "description": "Categoria do compromisso que herda uma identidade de cor."
@@ -45,6 +50,22 @@
         "recurringDays": {
           "type": "number",
           "description": "Intervalo de recorrência medido em dias (ex: 14 para quinzenal)."
+        },
+        "locationText": {
+          "type": "string",
+          "description": "Cidade ou endereço do compromisso ou date."
+        },
+        "instagramHandle": {
+          "type": "string",
+          "description": "Perfil do Instagram ou localização vinculada (começa com @)."
+        },
+        "relatedDateSuggestionId": {
+          "type": "string",
+          "description": "ID da sugestão de date vinculada do DateChecklist."
+        },
+        "includeInMonthlyCount": {
+          "type": "boolean",
+          "description": "Indica se o evento é contabilizado na conferência do mês (usado para Rolês com Amigos e Outros)."
         },
         "creator": {
           "type": "string",
@@ -82,6 +103,130 @@
         }
       },
       "required": ["text", "author", "createdAt", "slotIndex"]
+    },
+    "PlaylistItem": {
+      "title": "PlaylistItem",
+      "description": "Itens da playlist compartilhada do casal.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Nome da música."
+        },
+        "artist": {
+          "type": "string",
+          "description": "Nome do cantor ou banda."
+        },
+        "url": {
+          "type": "string",
+          "description": "URL de incorporação do Spotify (embed)."
+        },
+        "creator": {
+          "type": "string",
+          "description": "Nome do criador que adicionou a música."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data em que a música foi adicionada."
+        }
+      },
+      "required": ["title", "url", "creator", "createdAt"]
+    },
+    "DateSuggestion": {
+      "title": "DateSuggestion",
+      "description": "Sugestões de locais e dates para o casal.",
+      "type": "object",
+      "properties": {
+        "placeName": {
+          "type": "string",
+          "description": "Nome do local de destino."
+        },
+        "instagramHandle": {
+          "type": "string",
+          "description": "Perfil do Instagram (opcional)."
+        },
+        "locationText": {
+          "type": "string",
+          "description": "Cidade ou endereço do date."
+        },
+        "isChecked": {
+          "type": "boolean",
+          "description": "Se a sugestão já foi realizada pelo casal."
+        },
+        "creator": {
+          "type": "string",
+          "description": "Quem adicionou o date."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data de criação."
+        },
+        "checkedBy": {
+          "type": "string",
+          "description": "Quem marcou como realizado."
+        },
+        "checkedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data em que foi realizado."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tipos de rolê/hashtags associadas ao date."
+        }
+      },
+      "required": ["placeName", "isChecked", "creator", "createdAt"]
+    },
+    "SecretLetter": {
+      "title": "SecretLetter",
+      "description": "Cartinhas secretas ou cápsulas do tempo virtuais trocadas entre o casal.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Título ou embalagem da cartinha."
+        },
+        "content": {
+          "type": "string",
+          "description": "Conteúdo romântico e íntimo da cartinha."
+        },
+        "sender": {
+          "type": "string",
+          "description": "Quem escreveu a cartinha."
+        },
+        "recipient": {
+          "type": "string",
+          "description": "Para quem a cartinha se destina."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Data de criação da carta."
+        },
+        "unlockType": {
+          "type": "string",
+          "enum": ["date", "pulses"],
+          "description": "Condição de liberação: data específica ou quantidade de pulsos de ocitocina acumulados."
+        },
+        "unlockValue": {
+          "type": "string",
+          "description": "Data YYYY-MM-DD de abertura ou string de quantidade de pulsos."
+        },
+        "isOpened": {
+          "type": "boolean",
+          "description": "Se a carta já foi aberta/lida pela destinatária."
+        },
+        "createdPulseCount": {
+          "type": "number",
+          "description": "Contagem global acumulada de pulsos no momento de criação."
+        }
+      },
+      "required": ["title", "content", "sender", "recipient", "createdAt", "unlockType", "unlockValue", "isOpened"]
     }
   },
   "firestore": {
@@ -92,6 +237,18 @@
     "postits/{entityId}": {
       "schema": "PostIt",
       "description": "Collection para exatamente 6 post-its virtuais simulando recados afetivos rápidos."
+    },
+    "playlist/{entityId}": {
+      "schema": "PlaylistItem",
+      "description": "Collection de músicas compartilhadas do casal."
+    },
+    "suggestions/{entityId}": {
+      "schema": "DateSuggestion",
+      "description": "Collection de sugestões de dates e rolês do casal."
+    },
+    "letters/{entityId}": {
+      "schema": "SecretLetter",
+      "description": "Collection de cartinhas de amor e cápsulas do tempo virtuais."
     }
   }
 }

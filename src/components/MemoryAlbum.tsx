@@ -1,11 +1,22 @@
 /**
  * @license
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.5
  */
 
-import React from 'react';
-import { motion } from 'motion/react';
-import { Sparkles, Heart, Pin, BookOpen, Camera, Award, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Sparkles, 
+  Heart, 
+  BookOpen, 
+  Camera, 
+  Play, 
+  Film, 
+  ChevronLeft, 
+  ChevronRight, 
+  X,
+  Compass
+} from 'lucide-react';
 import { CalendarEvent } from '../types';
 import { formatDateBr } from '../utils/dashboardCalculations';
 
@@ -13,40 +24,108 @@ interface MemoryAlbumProps {
   events: CalendarEvent[];
 }
 
+interface AlbumItem {
+  id: string;
+  eventId: string;
+  title: string;
+  description: string;
+  date: string;
+  creator: string;
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  imageIndex?: number; // 1, 2 or 3
+}
+
 export const MemoryAlbum: React.FC<MemoryAlbumProps> = ({ events }) => {
-  const [currentPage, setCurrentPage] = React.useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const ITEMS_PER_PAGE = 9;
 
-  // Filter events of type 'Date' or any event that has a custom imageUrl attached
-  const photoEvents = events.filter((evt) => evt.imageUrl);
+  // Flatten events into separate photos/videos for a real "photo dump"
+  const albumItems: AlbumItem[] = [];
 
-  // Fallback romantic template placeholders if no custom photos are uploaded yet
-  // This simulates the scrapbook and encourages the user to upload theirs
-  const defaultSeeds = [
+  events.forEach((evt) => {
+    if (evt.imageUrl) {
+      albumItems.push({
+        id: `${evt.id}-img1`,
+        eventId: evt.id,
+        title: evt.title,
+        description: evt.description || '',
+        date: evt.date,
+        creator: evt.creator,
+        mediaUrl: evt.imageUrl,
+        mediaType: 'image',
+        imageIndex: 1,
+      });
+    }
+    if (evt.imageUrl2) {
+      albumItems.push({
+        id: `${evt.id}-img2`,
+        eventId: evt.id,
+        title: `${evt.title} (Dump #2)`,
+        description: evt.description || '',
+        date: evt.date,
+        creator: evt.creator,
+        mediaUrl: evt.imageUrl2,
+        mediaType: 'image',
+        imageIndex: 2,
+      });
+    }
+    if (evt.imageUrl3) {
+      albumItems.push({
+        id: `${evt.id}-img3`,
+        eventId: evt.id,
+        title: `${evt.title} (Dump #3)`,
+        description: evt.description || '',
+        date: evt.date,
+        creator: evt.creator,
+        mediaUrl: evt.imageUrl3,
+        mediaType: 'image',
+        imageIndex: 3,
+      });
+    }
+    if (evt.videoUrl) {
+      albumItems.push({
+        id: `${evt.id}-vid`,
+        eventId: evt.id,
+        title: `${evt.title} (Vídeo)`,
+        description: evt.description || '',
+        date: evt.date,
+        creator: evt.creator,
+        mediaUrl: evt.videoUrl,
+        mediaType: 'video',
+      });
+    }
+  });
+
+  // Romantics default placeholders if list is empty
+  const defaultSeeds: AlbumItem[] = [
     {
       id: 'default-album-1',
+      eventId: 'default-1',
       title: 'Nosso Primeiro Encontro de Proveta',
       description: 'O início de reações em cadeia estáveis. Afinidade molecular espontânea!',
       date: '2026-02-14',
       creator: 'Érica',
-      imageUrl: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&q=80&w=600', // Romantic hand holding
+      mediaUrl: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&q=80&w=600',
+      mediaType: 'image',
     },
     {
       id: 'default-album-2',
+      eventId: 'default-2',
       title: 'Monografia de Sintese Termorregulada',
       description: 'Superando o frio com muito dengo, calor latente corporal constante.',
       date: '2026-04-12',
       creator: 'Letícia',
-      imageUrl: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&q=80&w=600', // Sparkling lights couple outline
+      mediaUrl: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&q=80&w=600',
+      mediaType: 'image',
     }
   ];
 
-  // Combine real photo events with fallback defaults if list is very short
-  const displayedAlbumItems = photoEvents.length > 0 ? photoEvents : defaultSeeds;
-
+  const displayedAlbumItems = albumItems.length > 0 ? albumItems : defaultSeeds;
   const totalPages = Math.ceil(displayedAlbumItems.length / ITEMS_PER_PAGE);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
@@ -55,12 +134,40 @@ export const MemoryAlbum: React.FC<MemoryAlbumProps> = ({ events }) => {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedItems = displayedAlbumItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
+  // Handlers for Lightbox Navigation
+  const handlePrevItem = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (lightboxIndex !== null) {
+      setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : displayedAlbumItems.length - 1));
+    }
+  };
+
+  const handleNextItem = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (lightboxIndex !== null) {
+      setLightboxIndex((prev) => (prev !== null && prev < displayedAlbumItems.length - 1 ? prev + 1 : 0));
+    }
+  };
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (lightboxIndex !== null) {
+        if (e.key === 'Escape') setLightboxIndex(null);
+        if (e.key === 'ArrowLeft') handlePrevItem();
+        if (e.key === 'ArrowRight') handleNextItem();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxIndex]);
+
   return (
     <div
       id="romantic-memory-album"
       className="bg-[#FCFAF6] border border-amber-250/50 rounded-2xl p-5 md:p-8 mt-6 relative overflow-hidden shadow-xs"
     >
-      {/* Decorative Curcumin flower background layer */}
+      {/* Decorative background layer */}
       <div className="absolute right-4 top-2 opacity-[0.04] pointer-events-none select-none z-0">
         <svg width="220" height="220" viewBox="0 0 200 200" fill="currentColor" className="text-amber-800">
           <path d="M100 20 C110 50 140 50 140 80 C140 110 110 110 100 140 C90 110 60 110 60 80 C60 50 90 50 100 20 Z" />
@@ -75,26 +182,26 @@ export const MemoryAlbum: React.FC<MemoryAlbumProps> = ({ events }) => {
         <div>
           <span className="text-[10px] text-rose-500 font-mono uppercase tracking-widest font-bold flex items-center gap-1.5">
             <Camera size={12} className="stroke-[2.2]" />
-            Nosso Livro de ATAS
+            Nosso Álbum de Recordações
           </span>
           <h3 className="text-2xl font-bold font-serif text-stone-900 flex items-center gap-2 mt-1">
-            Álbum de Reações Estáveis
+            Mural de Afetos Estáveis 
           </h3>
-          <p className="text-xs text-stone-600 font-bold font-mono mt-0.5 animate-pulse">
-            Ainda faltam testes, mas suspeito que exista compatibilidade química.
+          <p className="text-xs text-stone-605 font-bold font-mono mt-0.5">
+            Colecionando dump de fotos e vídeos dos nossos dias especiais juntas.
           </p>
         </div>
-
-
       </div>
 
-      {/* Sticky Photo Scrapbook Layout */}
+      {/* Grid Scrapbook Layout */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10 pb-4 relative z-10 justify-items-center">
         {paginatedItems.map((item, index) => {
-          // Preset rotations to look casual, handwritten, and custom-positioned
-          const rotations = ['rotate-[-2.5deg]', 'rotate-[3deg]', 'rotate-[-1.5deg]', 'rotate-[2deg]', 'rotate-[-3deg]', 'rotate-[1deg]'];
-          const rotationClass = rotations[index % rotations.length];
+          // Calculate overall index in displayedAlbumItems for lightbox trigger
+          const overallIndex = startIndex + index;
 
+          // Preset random look rotations
+          const rotations = ['rotate-[-2deg]', 'rotate-[2.5deg]', 'rotate-[-1.5deg]', 'rotate-[1.5deg]', 'rotate-[-3deg]', 'rotate-[1.2deg]'];
+          const rotationClass = rotations[index % rotations.length];
           const isCustom = !item.id.startsWith('default-album');
 
           return (
@@ -103,46 +210,69 @@ export const MemoryAlbum: React.FC<MemoryAlbumProps> = ({ events }) => {
               initial={{ opacity: 0, y: 15 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={`bg-[#FFFFFF] ${rotationClass} p-4 pb-7 border border-stone-250 rounded-lg shadow-sm hover:shadow-md hover:scale-[1.02] hover:rotate-0 hover:z-20 transition-all duration-300 w-full max-w-[260px] relative group`}
+              transition={{ duration: 0.5, delay: index * 0.08 }}
+              onClick={() => setLightboxIndex(overallIndex)}
+              className={`bg-[#FFFFFF] ${rotationClass} p-4 pb-6 border border-stone-250 rounded-lg shadow-sm hover:shadow-md hover:scale-[1.03] hover:rotate-0 hover:z-20 transition-all duration-300 w-full max-w-[260px] relative group cursor-pointer`}
             >
-              {/* Scrapbook Cute Washi Tape effect at top */}
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-16 h-5 bg-amber-100/70 border-x border-dashed border-amber-300 backdrop-blur-xs rotate-[-6deg] select-none pointer-events-none" />
+              {/* Scrapbook Tape effect at top */}
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-4 bg-amber-100/60 border-x border-dashed border-amber-300 rotate-[-5deg] select-none pointer-events-none" />
 
-              {/* Photo Viewport Container */}
-              <div className="w-full aspect-square bg-[#FAF8F5] overflow-hidden relative border border-stone-200 shadow-xs">
-                <img
-                  src={item.imageUrl}
-                  alt={item.title}
-                  className="w-full h-full object-cover filter brightness-[1.01] contrast-[0.98]"
-                  referrerPolicy="no-referrer"
-                />
+              {/* Photo Viewport */}
+              <div className="w-full aspect-square bg-[#FAF8F5] overflow-hidden relative border border-stone-200/80 shadow-3xs">
+                {item.mediaType === 'video' ? (
+                  <div className="w-full h-full relative flex items-center justify-center bg-black">
+                    <video
+                      src={item.mediaUrl}
+                      className="w-full h-full object-cover opacity-80"
+                      muted
+                      playsInline
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-stone-900/80 border border-white flex items-center justify-center text-white shadow-md">
+                        <Play size={16} className="fill-white translate-x-0.5" />
+                      </div>
+                    </div>
+                    <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-stone-900/80 text-white font-mono text-[7px] font-bold rounded flex items-center gap-1 uppercase">
+                      <Film size={8} /> Vídeo
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={item.mediaUrl}
+                    alt={item.title}
+                    className="w-full h-full object-cover filter brightness-[1.01]"
+                    referrerPolicy="no-referrer"
+                  />
+                )}
 
-                {/* Date sticker inside photo */}
-                <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/60 text-white font-mono text-[8.5px] rounded-md tracking-wider font-extrabold">
+                {/* Date tag */}
+                <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/60 text-white font-mono text-[8px] rounded-md tracking-wider font-extrabold">
                   {formatDateBr(item.date)}
                 </div>
               </div>
 
-              {/* Custom Cursive Caption Area (Reference to cursive aesthetic) */}
-              <div className="mt-4 text-center space-y-1 px-1">
-                <h4 className="font-handwritten text-lg font-bold text-rose-600 capitalize tracking-wide leading-tight break-words">
-                  {item.title.toLowerCase()}
-                </h4>
-                
-                <p className="text-[11.5px] text-stone-700 leading-relaxed italic break-words py-1 font-bold">
-                  "{item.description || 'Pelo menos a temperatura corpórea esteve muito alta de carinho.'}"
-                </p>
+              {/* Caption Area (Responsive height & scrolling support to prevent overflow) */}
+              <div className="mt-4 text-center space-y-1.5 px-1 flex flex-col h-[105px] justify-between">
+                <div>
+                  <h4 className="font-handwritten text-base font-extrabold text-rose-600 capitalize tracking-wide leading-tight break-words truncate">
+                    {item.title.toLowerCase()}
+                  </h4>
+                  
+                  {/* Scrolling description box allows reading everything cleanly without clipping! */}
+                  <div className="text-[10.5px] text-stone-650 leading-relaxed font-bold font-sans overflow-y-auto max-h-[50px] pr-1 mt-1 scrollbar-thin scrollbar-thumb-stone-200">
+                    {item.description ? `"${item.description}"` : 'Sem descrição cadastrada'}
+                  </div>
+                </div>
 
-                {/* Sub-label showing creator/category */}
+                {/* Sub-label */}
                 <div className="pt-2 border-t border-dashed border-amber-200/50 font-mono text-[8px] uppercase tracking-wide text-stone-500 font-extrabold flex items-center justify-between">
-                  <span>Foto por: {item.creator}</span>
+                  <span>Por: {item.creator}</span>
                   {isCustom ? (
-                    <span className="flex items-center gap-0.5 text-rose-500 font-bold">
+                    <span className="flex items-center gap-0.5 text-rose-500 font-extrabold">
                       <Heart size={7} className="fill-rose-500" /> Real
                     </span>
                   ) : (
-                    <span className="text-amber-600 font-bold">Exemplo</span>
+                    <span className="text-amber-600 font-extrabold">Exemplo</span>
                   )}
                 </div>
               </div>
@@ -182,14 +312,14 @@ export const MemoryAlbum: React.FC<MemoryAlbumProps> = ({ events }) => {
         </div>
       )}
 
-      {/* Bottom Stickers row inspired by Image 3 and 5 (Laboratory Stickers & Love elements) */}
+      {/* STICKERS DE LABORATÓRIO */}
       <div className="mt-10 pt-6 border-t border-amber-250/55 flex flex-wrap justify-center md:justify-between items-center gap-4 text-stone-400 select-none z-10 relative">
-        <div className="flex items-center gap-2 text-[10px] font-bold font-mono text-stone-605">
+        <div className="flex items-center gap-2 text-[10px] font-bold font-mono text-stone-600">
           <BookOpen size={11} className="text-rose-600" />
-          <span>Fórmula de Afinidade: Forte solução pra matar a saudade</span>
+          <span>Fórmula de Afinidade: Solução química contra a saudade</span>
         </div>
 
-        {/* Beautiful vector laboratory & romantic fusion elements sticker board */}
+        {/* Beautiful vector sticker board */}
         <div className="flex items-center gap-4 pb-2">
           {/* Microscope sticker with heart */}
           <div className="px-2 py-1 bg-amber-50/65 rounded-lg flex items-center gap-1.5 border border-amber-200/55 text-[9.5px] text-stone-650 font-mono font-bold shadow-2xs hover:scale-105 transition-transform">
@@ -200,7 +330,7 @@ export const MemoryAlbum: React.FC<MemoryAlbumProps> = ({ events }) => {
               <path d="M9 14h2" />
               <path d="M9 12a3 3 0 0 1 6 0v5" />
             </svg>
-            <span>Foco = Comprovações fotográficas de dates</span>
+            <span>Foco = Multi-análise de lembranças</span>
           </div>
 
           {/* Feniletilamina element card (Pe) */}
@@ -223,17 +353,103 @@ export const MemoryAlbum: React.FC<MemoryAlbumProps> = ({ events }) => {
             <span className="text-xs font-bold leading-none -mt-0.5 font-sans">N</span>
             <span className="text-[5px] opacity-85 uppercase font-mono">Nitrogênio</span>
           </div>
-
-          {/* Cute Beaker with eyes sticker */}
-          <div className="p-1 px-2.5 bg-[#FAF3E3] text-amber-805 border border-amber-300 rounded-full flex items-center gap-1 hover:skew-x-2 transition-transform text-[9px] font-mono leading-none font-bold">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-bounce">
-              <path d="M12 2v20" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
-            <span>Ph = 8 (Neutro de Reclamações)</span>
-          </div>
         </div>
       </div>
+
+      {/* FULL-SCREEN LIGHTBOX MODAL */}
+      <AnimatePresence>
+        {lightboxIndex !== null && displayedAlbumItems[lightboxIndex] && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-between p-4"
+          >
+            {/* Top Close Bar */}
+            <div className="w-full flex justify-between items-center max-w-5xl py-2 z-10 text-stone-300 font-mono text-[10px] uppercase font-bold">
+              <span className="flex items-center gap-1.5 text-rose-400">
+                <Sparkles size={13} className="animate-pulse" />
+                <span>Memória {lightboxIndex + 1} de {displayedAlbumItems.length}</span>
+              </span>
+              <button
+                onClick={() => setLightboxIndex(null)}
+                className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all outline-none"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Media Body & navigation keys */}
+            <div className="flex-1 w-full flex items-center justify-between max-w-5xl relative gap-2">
+              {/* Left Arrow */}
+              <button
+                onClick={handlePrevItem}
+                className="absolute left-2 md:left-4 p-3 bg-white/10 hover:bg-white/20 hover:scale-105 active:scale-95 text-white rounded-full transition-all z-10 outline-none border border-white/10"
+              >
+                <ChevronLeft size={24} />
+              </button>
+
+              {/* Main Media Content */}
+              <div className="w-full h-full flex items-center justify-center p-4">
+                <motion.div
+                  key={lightboxIndex}
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="max-h-[70vh] max-w-full flex items-center justify-center relative overflow-hidden"
+                >
+                  {displayedAlbumItems[lightboxIndex].mediaType === 'video' ? (
+                    <video
+                      src={displayedAlbumItems[lightboxIndex].mediaUrl}
+                      controls
+                      autoPlay
+                      className="max-h-[70vh] max-w-[90vw] md:max-w-2xl object-contain rounded-lg shadow-2xl border border-white/10"
+                    />
+                  ) : (
+                    <img
+                      src={displayedAlbumItems[lightboxIndex].mediaUrl}
+                      alt={displayedAlbumItems[lightboxIndex].title}
+                      className="max-h-[70vh] max-w-[90vw] md:max-w-3xl object-contain rounded-lg shadow-2xl border border-white/10 select-none"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                </motion.div>
+              </div>
+
+              {/* Right Arrow */}
+              <button
+                onClick={handleNextItem}
+                className="absolute right-2 md:right-4 p-3 bg-white/10 hover:bg-white/20 hover:scale-105 active:scale-95 text-white rounded-full transition-all z-10 outline-none border border-white/10"
+              >
+                <ChevronRight size={24} />
+              </button>
+            </div>
+
+            {/* Bottom Legend Details panel */}
+            <div className="w-full max-w-2xl bg-stone-900/80 border border-white/10 rounded-2xl p-5 mb-4 text-center space-y-2 backdrop-blur-xs shadow-2xl">
+              <span className="px-2.5 py-0.5 bg-rose-950/60 text-rose-300 border border-rose-800/40 font-mono text-[9px] uppercase font-bold tracking-wider rounded-full inline-block">
+                {formatDateBr(displayedAlbumItems[lightboxIndex].date)}
+              </span>
+
+              <h3 className="text-lg md:text-xl font-bold font-serif text-white tracking-tight leading-tight">
+                {displayedAlbumItems[lightboxIndex].title}
+              </h3>
+
+              {displayedAlbumItems[lightboxIndex].description && (
+                <p className="text-xs text-stone-300 leading-relaxed max-w-lg mx-auto font-medium">
+                  "{displayedAlbumItems[lightboxIndex].description}"
+                </p>
+              )}
+
+              <div className="text-[9px] font-mono font-bold text-stone-500 uppercase tracking-widest pt-1">
+                <span>Registrado por: </span>
+                <strong className="text-stone-300">{displayedAlbumItems[lightboxIndex].creator}</strong>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

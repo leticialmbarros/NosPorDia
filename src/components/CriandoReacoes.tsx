@@ -16,8 +16,14 @@ import {
   RefreshCw,
   Heart,
   Volume2,
+  Trash2,
+  Play,
+  Plus,
+  ListMusic,
+  ExternalLink,
 } from 'lucide-react';
 import { dataService } from '../services/dataService';
+import { PlaylistItem } from '../types';
 
 interface HiddenSong {
   id: string;
@@ -190,6 +196,50 @@ export const CriandoReacoes: React.FC<CriandoReacoesProps> = ({ currentProfile }
   // Temp editing fields
   const [tempTitle, setTempTitle] = useState('');
   const [tempUrl, setTempUrl] = useState('');
+
+  // Playlist states
+  const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
+  const [newTrackTitle, setNewTrackTitle] = useState('');
+  const [newTrackArtist, setNewTrackArtist] = useState('');
+  const [newTrackUrl, setNewTrackUrl] = useState('');
+  const [activePlaylistItem, setActivePlaylistItem] = useState<PlaylistItem | null>(null);
+  const [isAddingSong, setIsAddingSong] = useState(false);
+  const [songIdToDelete, setSongIdToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = dataService.subscribePlaylist((data) => {
+      setPlaylist(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleAddSong = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTrackTitle.trim() || !newTrackUrl.trim()) return;
+    const embedUrl = extractSpotifyEmbedUrl(newTrackUrl);
+    try {
+      await dataService.addPlaylistItem(newTrackTitle.trim(), embedUrl, currentProfile, newTrackArtist.trim());
+      setNewTrackTitle('');
+      setNewTrackArtist('');
+      setNewTrackUrl('');
+      setIsAddingSong(false);
+    } catch (err) {
+      console.error('Error adding song to playlist:', err);
+    }
+  };
+
+  const handleDeleteSong = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      await dataService.deletePlaylistItem(id);
+      if (activePlaylistItem?.id === id) {
+        setActivePlaylistItem(null);
+      }
+      setSongIdToDelete(null);
+    } catch (err) {
+      console.error('Error deleting playlist item:', err);
+    }
+  };
 
   // Persist customized links
   useEffect(() => {
@@ -572,6 +622,280 @@ export const CriandoReacoes: React.FC<CriandoReacoesProps> = ({ currentProfile }
             </div>
           );
         })}
+      </div>
+
+      {/* COMPACT SHARED PLAYLIST SECTION */}
+      <div className="mt-8 pt-8 border-t border-amber-250/40 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <div className="flex items-center gap-1.5 mb-1 text-rose-500 font-mono font-extrabold uppercase text-[10px] tracking-wider">
+              <ListMusic size={14} className="animate-pulse" />
+              <span>Playlist Compartilhada</span>
+            </div>
+            <h3 className="text-xl font-bold font-serif text-stone-900 leading-tight">
+              Síntese Melódica
+            </h3>
+            <p className="text-[10px] text-stone-500 font-mono leading-normal mt-0.5 uppercase tracking-wide">
+              Músicas sugeridas por vocês para escutarem juntas. Adicione novos reagentes harmônicos!
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsAddingSong(!isAddingSong)}
+            className="px-3 py-2 bg-stone-900 hover:bg-stone-800 text-white font-mono text-[9px] font-bold tracking-wide uppercase rounded-xl flex items-center gap-1.5 self-start shadow-3xs"
+          >
+            <Plus size={12} className={isAddingSong ? 'rotate-45 transition-transform' : 'transition-transform'} />
+            <span>{isAddingSong ? 'Fechar Cadastro' : 'Adicionar Música'}</span>
+          </button>
+        </div>
+
+        {/* Inline form to add song */}
+        <AnimatePresence>
+          {isAddingSong && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden mb-6"
+            >
+              <form onSubmit={handleAddSong} className="bg-white border border-rose-200/40 rounded-2xl p-4 shadow-3xs space-y-3 max-w-xl">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[8.5px] font-extrabold font-mono uppercase text-slate-500">
+                      Nome da Música *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Te Amar Demais, Flores..."
+                      value={newTrackTitle}
+                      onChange={(e) => setNewTrackTitle(e.target.value)}
+                      className="w-full text-xs px-3 py-2 border border-slate-200 bg-stone-50/50 rounded-xl focus:outline-none focus:border-rose-400 font-semibold text-stone-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[8.5px] font-extrabold font-mono uppercase text-slate-500">
+                      Cantor / Artista
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: AnaVitória, Marília Mendonça..."
+                      value={newTrackArtist}
+                      onChange={(e) => setNewTrackArtist(e.target.value)}
+                      className="w-full text-xs px-3 py-2 border border-slate-200 bg-stone-50/50 rounded-xl focus:outline-none focus:border-rose-400 font-semibold text-stone-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[8.5px] font-extrabold font-mono uppercase text-slate-500">
+                      Link Spotify ou Código Embed *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Cole o link do Spotify..."
+                      value={newTrackUrl}
+                      onChange={(e) => setNewTrackUrl(e.target.value)}
+                      className="w-full text-xs px-3 py-2 border border-slate-200 bg-stone-50/50 rounded-xl focus:outline-none focus:border-rose-400 font-mono font-bold text-stone-700 placeholder:font-sans placeholder:font-normal"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingSong(false);
+                      setNewTrackTitle('');
+                      setNewTrackArtist('');
+                      setNewTrackUrl('');
+                    }}
+                    className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-mono text-[9px] font-bold rounded-lg uppercase"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-3.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-mono text-[9px] font-bold rounded-lg uppercase flex items-center gap-1 shadow-sm cursor-pointer"
+                  >
+                    <Check size={10} />
+                    <span>Salvar na Playlist</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Music Player Grid layout */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          {/* Active Player (Left column) */}
+          <div className="md:col-span-2">
+            <AnimatePresence mode="wait">
+              {activePlaylistItem ? (
+                <motion.div
+                  key={activePlaylistItem.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-black/5 p-1 rounded-2xl border border-rose-200/30 overflow-hidden shadow-xs relative"
+                >
+                  <iframe
+                    src={activePlaylistItem.url}
+                    width="100%"
+                    height="352"
+                    style={{ borderRadius: '12px' }}
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    loading="lazy"
+                    title={`Spotify Player - ${activePlaylistItem.title}`}
+                    className="w-full h-[352px] border-0 rounded-xl"
+                  />
+                  <div className="absolute top-2 right-2 bg-stone-900/80 text-white text-[8px] font-mono uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-xs">
+                    Tocando Agora ⚡
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="h-[352px] border border-dashed border-amber-250/50 bg-amber-50/25 rounded-2xl flex flex-col items-center justify-center text-center p-6"
+                >
+                  <div className="w-14 h-14 bg-rose-50 border border-rose-100 rounded-full flex items-center justify-center text-rose-500 mb-4 animate-bounce">
+                    <Music size={24} />
+                  </div>
+                  <h4 className="text-sm font-bold font-serif text-stone-850">Resonância em Espera</h4>
+                  <p className="text-[10px] text-stone-500 font-mono max-w-[200px] leading-relaxed mt-2 uppercase font-semibold">
+                    Escolha um reagente da playlist ao lado para ativar a síntese melódica! 🧪❤️
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Tracklist List (Right columns) */}
+          <div className="md:col-span-3 flex flex-col justify-between">
+            <div className="space-y-2 max-h-[352px] overflow-y-auto pr-1">
+              {playlist.length === 0 ? (
+                <div className="p-8 border border-dashed border-stone-200/80 bg-white rounded-2xl text-center flex flex-col items-center justify-center h-full min-h-[220px]">
+                  <p className="text-xs text-stone-400 font-mono font-bold">Nenhuma música cadastrada na playlist por enquanto.</p>
+                  <p className="text-[9px] text-stone-400 font-mono mt-1 font-semibold uppercase">Clique em "Adicionar Música" acima e comece a construir sua sintonia especial!</p>
+                </div>
+              ) : (
+                playlist.map((track, index) => {
+                  const isActive = activePlaylistItem?.id === track.id;
+                  return (
+                    <motion.div
+                      key={track.id}
+                      onClick={() => setActivePlaylistItem(track)}
+                      className={`p-3 border rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                        isActive
+                          ? 'bg-rose-50/70 border-rose-200 shadow-3xs'
+                          : 'bg-white hover:bg-stone-50 border-stone-150 hover:border-amber-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Number or active icon */}
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[10.5px] font-mono font-bold shrink-0">
+                          {isActive ? (
+                            <Volume2 size={13} className="text-rose-500 animate-pulse" />
+                          ) : (
+                            <span className="text-stone-400">{(index + 1).toString().padStart(2, '0')}</span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <h4 className={`text-xs font-bold leading-tight flex items-center flex-wrap gap-1.5 ${isActive ? 'text-rose-700 font-extrabold' : 'text-stone-900'}`}>
+                            <span>{track.title}</span>
+                            {track.artist && (
+                              <span className="text-stone-500 font-normal text-[10px] italic">
+                                por {track.artist}
+                              </span>
+                            )}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[8.5px] font-mono text-stone-400 block">
+                              Adicionado por: <strong className="text-stone-600">{track.creator}</strong>
+                            </span>
+                            {track.url && (
+                              <a
+                                href={track.url.replace('/embed/', '/')}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-0.5 text-[8.5px] font-mono font-bold text-rose-500 hover:text-rose-600 hover:underline"
+                                title="Abrir no Spotify"
+                              >
+                                <span>Link</span>
+                                <ExternalLink size={8} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Play or delete buttons */}
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {songIdToDelete === track.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => handleDeleteSong(track.id, e)}
+                              className="px-1.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[8px] font-mono font-bold rounded-md uppercase transition-colors"
+                              title="Confirmar exclusão"
+                            >
+                              Sim
+                            </button>
+                            <button
+                              onClick={() => setSongIdToDelete(null)}
+                              className="px-1.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-600 text-[8px] font-mono font-bold rounded-md uppercase transition-colors"
+                              title="Cancelar"
+                            >
+                              Não
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActivePlaylistItem(isActive ? null : track);
+                              }}
+                              className={`p-1.5 rounded-lg border transition-colors ${
+                                isActive
+                                  ? 'bg-rose-500 text-white border-rose-600'
+                                  : 'bg-stone-50 hover:bg-stone-100 text-stone-500 border-stone-200'
+                              }`}
+                              title={isActive ? 'Pausar Player' : 'Tocar Som'}
+                            >
+                              <Play size={10} className={isActive ? 'fill-white' : ''} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSongIdToDelete(track.id);
+                              }}
+                              className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50/50 rounded-lg transition-colors border border-transparent hover:border-rose-100"
+                              title="Excluir da playlist"
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Quick status bar */}
+            <div className="mt-4 p-2.5 bg-[#FCFAF6] rounded-xl border border-stone-200/50 flex items-center justify-between text-[9px] font-mono text-stone-500">
+              <span className="flex items-center gap-1">
+                <Music size={11} className="text-rose-500" />
+                <span>Total: <strong className="text-stone-700">{playlist.length} faixas</strong></span>
+              </span>
+              <span>Sintonização Compartilhada Ativa ❤️</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

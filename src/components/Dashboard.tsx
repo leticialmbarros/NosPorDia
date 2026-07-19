@@ -173,9 +173,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </p>
                   <span
                     className={`text-[7.5px] px-1 py-0.2 rounded border tracking-wider font-mono uppercase font-bold ${
-                      CATEGORY_COLORS['Date de Exploração']?.bg || 'bg-indigo-100/90'
-                    } ${CATEGORY_COLORS['Date de Exploração']?.text || 'text-indigo-900'} ${
-                      CATEGORY_COLORS['Date de Exploração']?.border || 'border-indigo-400'
+                      CATEGORY_COLORS['Dates de Exploração']?.bg || 'bg-indigo-100/90'
+                    } ${CATEGORY_COLORS['Dates de Exploração']?.text || 'text-indigo-900'} ${
+                      CATEGORY_COLORS['Dates de Exploração']?.border || 'border-indigo-400'
                     }`}
                   >
                     Exploração

@@ -36,11 +36,20 @@ service cloud.firestore {
         && data.date.size() == 10 // YYYY-MM-DD
         && (!('endDate' in data) || data.endDate == null || (data.endDate is string && data.endDate.size() == 10))
         && (!('imageUrl' in data) || data.imageUrl == null || data.imageUrl is string)
+        && (!('locationText' in data) || data.locationText == null || data.locationText is string)
+        && (!('instagramHandle' in data) || data.instagramHandle == null || data.instagramHandle is string)
+        && (!('relatedDateSuggestionId' in data) || data.relatedDateSuggestionId == null || data.relatedDateSuggestionId is string)
+        && (!('includeInMonthlyCount' in data) || data.includeInMonthlyCount == null || data.includeInMonthlyCount is bool)
         && data.category is string
-        && (data.category == 'Conchinha de Manutenção' 
-            || data.category == 'Date de Exploração' 
-            || data.category == 'Casa da Mãe - SM' 
+        && (data.category == 'Conchinhas de Manutenção' 
+            || data.category == 'Dates de Exploração' 
+            || data.category == 'Hasta Home - SM' 
             || data.category == 'Compromissos de Trabalho' 
+            || data.category == 'Saúde&Autocuidado'
+            || data.category == 'Momentos Solo'
+            || data.category == 'Dates em Casa'
+            || data.category == 'Viagens & Aventuras'
+            || data.category == 'Rolês com Amigos & Família'
             || data.category == 'Outros')
         && data.isRecurring is bool
         && (data.recurringDays == null || (data.recurringDays is int && data.recurringDays > 0))
@@ -60,6 +69,56 @@ service cloud.firestore {
         && data.slotIndex is int 
         && data.slotIndex >= 0 
         && data.slotIndex <= 5;
+    }
+
+    // Enforce data shapes for PlaylistItem
+    function isValidPlaylistItem(data) {
+      return data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 150
+        && (!('artist' in data) || data.artist == null || (data.artist is string && data.artist.size() <= 150))
+        && data.url is string
+        && data.url.size() >= 1
+        && data.creator is string
+        && data.creator.size() >= 1
+        && data.creator.size() <= 50;
+    }
+
+    // Enforce data shapes for DateSuggestion
+    function isValidDateSuggestion(data) {
+      return data.placeName is string
+        && data.placeName.size() >= 1
+        && data.placeName.size() <= 200
+        && (!('instagramHandle' in data) || data.instagramHandle == null || (data.instagramHandle is string && data.instagramHandle.size() <= 100))
+        && (!('locationText' in data) || data.locationText == null || (data.locationText is string && data.locationText.size() <= 200))
+        && data.isChecked is bool
+        && data.creator is string
+        && data.creator.size() >= 1
+        && data.creator.size() <= 50
+        && (!('tags' in data) || data.tags == null || data.tags is list);
+    }
+
+    // Enforce data shapes for SecretLetter
+    function isValidSecretLetter(data) {
+      return data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 150
+        && data.content is string
+        && data.content.size() >= 1
+        && data.content.size() <= 5000
+        && data.sender is string
+        && data.sender.size() >= 1
+        && data.sender.size() <= 50
+        && data.recipient is string
+        && data.recipient.size() >= 1
+        && data.recipient.size() <= 50
+        && data.unlockType is string
+        && (data.unlockType == 'date' || data.unlockType == 'pulses')
+        && data.unlockValue is string
+        && data.unlockValue.size() >= 1
+        && data.unlockValue.size() <= 50
+        && data.isOpened is bool
+        && (!('createdPulseCount' in data) || data.createdPulseCount == null || data.createdPulseCount is int || data.createdPulseCount is float);
     }
 
     // --- RULES ---
@@ -91,6 +150,40 @@ service cloud.firestore {
     match /pulses/{pulseId} {
       allow read: if true;
       allow write: if isValidId(pulseId);
+    }
+
+    // Shared Playlist
+    match /playlist/{playlistId} {
+      allow read: if true;
+      allow create: if isValidId(playlistId)
+        && isValidPlaylistItem(incoming())
+        && incoming().createdAt is string;
+      allow update: if isValidId(playlistId)
+        && isValidPlaylistItem(incoming());
+      allow delete: if isValidId(playlistId);
+    }
+
+    // Date Suggestions
+    match /suggestions/{suggestionId} {
+      allow read: if true;
+      allow create: if isValidId(suggestionId)
+        && isValidDateSuggestion(incoming())
+        && incoming().createdAt is string;
+      allow update: if isValidId(suggestionId)
+        && isValidDateSuggestion(incoming());
+      allow delete: if isValidId(suggestionId);
+    }
+
+    // Secret Letters
+    match /letters/{letterId} {
+      allow read: if true;
+      allow create: if isValidId(letterId)
+        && isValidSecretLetter(incoming())
+        && incoming().createdAt is string;
+      allow update: if isValidId(letterId)
+        && isValidSecretLetter(incoming())
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(letterId);
     }
   }
 }

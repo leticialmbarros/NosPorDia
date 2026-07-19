@@ -204,6 +204,21 @@ export function stripEmojis(text: string): string {
     .trim();
 }
 
+export function shouldEventCountMonthly(evt: CalendarEvent): boolean {
+  if (
+    evt.category === 'Dates de Exploração' ||
+    evt.category === 'Dates em Casa' ||
+    evt.category === 'Conchinhas de Manutenção' ||
+    evt.category === 'Viagens & Aventuras'
+  ) {
+    return true;
+  }
+  if (evt.category === 'Rolês com Amigos & Família' || evt.category === 'Outros') {
+    return !!evt.includeInMonthlyCount;
+  }
+  return false;
+}
+
 export function calculateDashboardStats(
   events: CalendarEvent[],
   todayStr: string,
@@ -233,8 +248,8 @@ export function calculateDashboardStats(
     const diffMs = occurTime - todayTime;
     const diffDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 
-    // Evaluate Santa Maria (Casa da Mãe - SM) Voyages
-    if (evt.category === 'Casa da Mãe - SM') {
+    // Evaluate Santa Maria (Hasta Home - SM) Voyages
+    if (evt.category === 'Hasta Home - SM') {
       if (minSmDays === null || diffDays < minSmDays) {
         minSmDays = diffDays;
         nextSmDate = nextOccurDate;
@@ -243,7 +258,7 @@ export function calculateDashboardStats(
     }
 
     // Evaluate Next Date de Exploração
-    if (evt.category === 'Date de Exploração') {
+    if (evt.category === 'Dates de Exploração') {
       if (minDateDays === null || diffDays < minDateDays) {
         minDateDays = diffDays;
         nextDateDate = nextOccurDate;
@@ -251,8 +266,8 @@ export function calculateDashboardStats(
       }
     }
 
-    // Evaluate Meetup index (Conchinha de Manutenção or Date de Exploração counts as meetup)
-    if (evt.category === 'Conchinha de Manutenção' || evt.category === 'Date de Exploração') {
+    // Evaluate Meetup index (using the dynamic monthly count rule)
+    if (shouldEventCountMonthly(evt)) {
       if (minDaysToMeetup === null || diffDays < minDaysToMeetup) {
         minDaysToMeetup = diffDays;
       }
@@ -267,12 +282,7 @@ export function calculateDashboardStats(
 
   let totalOccurrencesInMonth = 0;
   events.forEach((evt) => {
-    // Count events where they spend time together: conchinha or date
-    const isSharedTime = 
-      evt.category === 'Conchinha de Manutenção' || 
-      evt.category === 'Date de Exploração';
-
-    if (isSharedTime) {
+    if (shouldEventCountMonthly(evt)) {
       const occurs = expandEventOccurrences(evt, firstDayStr, lastDayStr);
       totalOccurrencesInMonth += occurs.length;
     }
@@ -283,7 +293,7 @@ export function calculateDashboardStats(
   const startRef = parseLocalDate(trialStartDateStr).getTime();
   const todayRef = parseLocalDate(todayStr).getTime();
   const elapsedMs = todayRef - startRef;
-  const daysElapsed = Math.max(0, Math.floor(elapsedMs / (1000 * 60 * 60 * 24)));
+  const daysElapsed = Math.max(0, Math.round(elapsedMs / (1000 * 60 * 60 * 24)));
 
   return {
     nextSantaMaria: {

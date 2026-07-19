@@ -26,6 +26,8 @@ import { CurcuminMolecule } from './components/CurcuminMolecule';
 import { MemoryAlbum } from './components/MemoryAlbum';
 import { ChemistryBackdrop } from './components/ChemistryBackdrop';
 import { CriandoReacoes } from './components/CriandoReacoes';
+import { DateChecklist } from './components/DateChecklist';
+import { CapsulaDoTempo } from './components/CapsulaDoTempo';
 
 // Dynamically compute current date matching the system/local date to keep metrics updated automatically!
 const now = new Date();
@@ -124,7 +126,7 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FDF9F5] text-stone-800 flex flex-col font-sans transition-colors duration-300 relative">
+    <div className="min-h-screen bg-[#FDF9F5] text-stone-800 flex flex-col font-sans transition-colors duration-300 relative notranslate">
       
       {/* Dynamic Background scientific grids with custom warm rosy color overlays */}
       <div className="absolute inset-x-0 top-0 h-[600px] bg-[linear-gradient(to_right,#EADCDD_1px,transparent_1px),linear-gradient(to_bottom,#EADCDD_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70 pointer-events-none" />
@@ -165,8 +167,8 @@ export default function App() {
                 <h1 className="text-4xl md:text-5xl text-rose-600 font-cursive select-none leading-none tracking-wide mt-1.5">
                   NósPorDia
                 </h1>
-                <span className="hidden leading-none xs:inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.5 rounded-md font-bold font-mono tracking-wider bg-rose-50 text-rose-600 border border-rose-100">
-                  C₂₁H₂₀O₆
+                <span className="hidden leading-none xs:inline-flex items-center gap-1.5 text-[9px] px-1.5 py-0.5 rounded-md font-extrabold font-mono tracking-wider bg-rose-50 text-rose-600 border border-rose-100">
+                  C<sub>21</sub>H<sub>20</sub>O<sub>6</sub>
                 </span>
               </div>
               <p className="text-[9.5px] text-stone-550 font-mono tracking-tight mt-0.5 uppercase font-semibold flex items-center gap-1.5">
@@ -217,6 +219,12 @@ export default function App() {
 
         {/* Laboratório Criando Reações */}
         <CriandoReacoes currentProfile={currentProfile} />
+
+        {/* Nosso Checklist de Dates */}
+        <DateChecklist currentProfile={currentProfile} />
+
+        {/* Cápsula do Tempo / Cartinhas Secretas */}
+        <CapsulaDoTempo currentProfile={currentProfile} />
       </main>
 
       {/* Footer bar */}

@@ -14,9 +14,10 @@ import {
   getDocs,
   query,
   orderBy,
+  increment,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured, handleFirestoreError, OperationType } from '../firebase';
-import { CalendarEvent, PostIt } from '../types';
+import { CalendarEvent, PostIt, PlaylistItem, DateSuggestion, SecretLetter } from '../types';
 
 // Mock DB for LocalStorage fallback
 const EVENTS_KEY = 'curcumina_events';
@@ -29,7 +30,7 @@ const DEFAULT_EVENTS: CalendarEvent[] = [
     title: 'Próximo Date',
     description: 'Encontro romântico especial para celebrar nossa afinidade absoluta e encher o tanque de ocitocina!',
     date: '2026-06-10',
-    category: 'Date de Exploração',
+    category: 'Dates de Exploração',
     isRecurring: false,
     creator: 'Érica',
     createdAt: new Date().toISOString(),
@@ -41,7 +42,7 @@ const DEFAULT_EVENTS: CalendarEvent[] = [
     title: 'Dormir Juntos Juntinhas 🛏️✨',
     description: 'Chamego termorregulado na cama para recarregar as energias.',
     date: '2026-06-11',
-    category: 'Conchinha de Manutenção',
+    category: 'Conchinhas de Manutenção',
     isRecurring: false,
     creator: 'Letícia',
     createdAt: new Date().toISOString(),
@@ -77,7 +78,7 @@ const DEFAULT_EVENTS: CalendarEvent[] = [
     title: 'Ela vem dormir comigo 🛏️💝',
     description: 'Noite especial juntinhas de puro dengo e carinho.',
     date: '2026-06-20',
-    category: 'Conchinha de Manutenção',
+    category: 'Conchinhas de Manutenção',
     isRecurring: false,
     creator: 'Letícia',
     createdAt: new Date().toISOString(),
@@ -121,7 +122,7 @@ const DEFAULT_EVENTS: CalendarEvent[] = [
     title: 'Casa da Mãe (Santa Maria) 🚌',
     description: 'Retorno para Santa Maria para visitar a família e receber aquele chamego de mãe.',
     date: '2026-06-26',
-    category: 'Casa da Mãe - SM',
+    category: 'Hasta Home - SM',
     isRecurring: false,
     creator: 'Letícia',
     createdAt: new Date().toISOString(),
@@ -131,7 +132,7 @@ const DEFAULT_EVENTS: CalendarEvent[] = [
     title: 'Casa da Mãe (Santa Maria) 🚌',
     description: 'Passando o fim de semana com a família em Santa Maria.',
     date: '2026-06-27',
-    category: 'Casa da Mãe - SM',
+    category: 'Hasta Home - SM',
     isRecurring: false,
     creator: 'Letícia',
     createdAt: new Date().toISOString(),
@@ -141,7 +142,7 @@ const DEFAULT_EVENTS: CalendarEvent[] = [
     title: 'Casa da Mãe (Santa Maria) 🚌',
     description: 'Tempo com a mamãe em Santa Maria.',
     date: '2026-06-28',
-    category: 'Casa da Mãe - SM',
+    category: 'Hasta Home - SM',
     isRecurring: false,
     creator: 'Letícia',
     createdAt: new Date().toISOString(),
@@ -151,7 +152,7 @@ const DEFAULT_EVENTS: CalendarEvent[] = [
     title: 'Casa da Mãe (Santa Maria) 🚌',
     description: 'Último dia de retorno familiar em Santa Maria antes da volta.',
     date: '2026-06-29',
-    category: 'Casa da Mãe - SM',
+    category: 'Hasta Home - SM',
     isRecurring: false,
     creator: 'Letícia',
     createdAt: new Date().toISOString(),
@@ -217,6 +218,10 @@ const listenersMap: Record<string, Set<any>> = {
   events: new Set(),
   postits: new Set(),
   pulses: new Set(),
+  playlist: new Set(),
+  suggestions: new Set(),
+  letters: new Set(),
+  pulseStats: new Set(),
 };
 
 if (typeof window !== 'undefined') {
@@ -230,6 +235,13 @@ if (typeof window !== 'undefined') {
           });
         }
       } catch (_) {}
+    }
+    if (e.key === 'curcumina_ocitocina_pulse_count' && e.newValue) {
+      if (listenersMap.pulseStats) {
+        listenersMap.pulseStats.forEach((cb) => {
+          try { cb({ count: Number(e.newValue) }); } catch (_) {}
+        });
+      }
     }
   });
 }
@@ -246,6 +258,61 @@ function triggerLocalUpdate(type: 'events' | 'postits', data: any) {
   }
 }
 
+// Helper to soft-migrate any old session categories/titles to the new ones
+export function migrateEventCategories(evt: CalendarEvent): CalendarEvent {
+  let cat = evt.category;
+  let title = evt.title;
+  let changed = false;
+
+  if (cat as string === 'Porto Alegre' || cat as string === 'Compromisso') {
+    cat = 'Outros';
+    changed = true;
+  } else if (cat as string === 'Santa Maria' || cat as string === 'Casa da Mãe - SM') {
+    cat = 'Hasta Home - SM';
+    changed = true;
+  } else if (cat as string === 'Date' || cat as string === 'Date de Exploração') {
+    cat = 'Dates de Exploração';
+    changed = true;
+  } else if (cat as string === 'Trabalho' || cat as string === 'Mestrado') {
+    cat = 'Compromissos de Trabalho';
+    changed = true;
+  } else if (cat as string === 'Conchinha de Manutenção') {
+    cat = 'Conchinhas de Manutenção';
+    changed = true;
+  } else if (cat as string === 'Dengo & Cinema em Casa') {
+    cat = 'Dates em Casa';
+    changed = true;
+  } else if (cat as string === 'Momento Solo / Recarregar') {
+    cat = 'Momentos Solo';
+    changed = true;
+  } else if (cat as string === 'Saúde & Autocuidado') {
+    cat = 'Saúde&Autocuidado';
+    changed = true;
+  } else if (cat as string === 'Rolê com Amigos & Família') {
+    cat = 'Rolês com Amigos & Família';
+    changed = true;
+  }
+  
+  if (evt.id === 'seed-sleepover-june-11' || evt.id === 'seed-sleepover-june-20') {
+    if (cat !== 'Conchinhas de Manutenção') {
+      cat = 'Conchinhas de Manutenção';
+      changed = true;
+    }
+  }
+
+  if (evt.id === 'seed-date-june-10' || evt.title === 'Nosso Date Especial 🕯️❤️') {
+    if (title !== 'Próximo Date') {
+      title = 'Próximo Date';
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    return { ...evt, category: cat, title };
+  }
+  return evt;
+}
+
 // LocalStorage helpers
 function getLocalEvents(): CalendarEvent[] {
   const stored = localStorage.getItem(EVENTS_KEY);
@@ -260,46 +327,13 @@ function getLocalEvents(): CalendarEvent[] {
     }
   }
 
-  // Soft-migrate any old session categories to the new ones
   let migrated = false;
   const list = parsed.map((evt) => {
-    let cat = evt.category;
-    let title = evt.title;
-    let changed = false;
-
-    if (cat as string === 'Porto Alegre' || cat as string === 'Compromisso') {
-      cat = 'Outros';
-      changed = true;
-    } else if (cat as string === 'Santa Maria') {
-      cat = 'Casa da Mãe - SM';
-      changed = true;
-    } else if (cat as string === 'Date') {
-      cat = 'Date de Exploração';
-      changed = true;
-    } else if (cat as string === 'Trabalho' || cat as string === 'Mestrado') {
-      cat = 'Compromissos de Trabalho';
-      changed = true;
-    }
-    
-    if (evt.id === 'seed-sleepover-june-11' || evt.id === 'seed-sleepover-june-20') {
-      if (cat !== 'Conchinha de Manutenção') {
-        cat = 'Conchinha de Manutenção';
-        changed = true;
-      }
-    }
-
-    if (evt.id === 'seed-date-june-10' || evt.title === 'Nosso Date Especial 🕯️❤️') {
-      if (title !== 'Próximo Date') {
-        title = 'Próximo Date';
-        changed = true;
-      }
-    }
-
-    if (changed) {
+    const migratedEvt = migrateEventCategories(evt);
+    if (migratedEvt.category !== evt.category || migratedEvt.title !== evt.title) {
       migrated = true;
-      return { ...evt, category: cat, title };
     }
-    return evt;
+    return migratedEvt;
   });
 
   if (migrated || !stored) {
@@ -413,10 +447,11 @@ export const dataService = {
         (snapshot) => {
           const eventsList: CalendarEvent[] = [];
           snapshot.forEach((docSnap) => {
-            eventsList.push({
+            const rawEvent = {
               id: docSnap.id,
               ...(docSnap.data() as Omit<CalendarEvent, 'id'>),
-            });
+            };
+            eventsList.push(migrateEventCategories(rawEvent));
           });
           callback(eventsList);
         },
@@ -457,6 +492,9 @@ export const dataService = {
           creator: newEvent.creator,
           createdAt: newEvent.createdAt,
           imageUrl: newEvent.imageUrl || null,
+          imageUrl2: newEvent.imageUrl2 || null,
+          imageUrl3: newEvent.imageUrl3 || null,
+          videoUrl: newEvent.videoUrl || null,
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, 'events');
@@ -478,7 +516,7 @@ export const dataService = {
           if (v !== undefined) {
             cleaned[k] = v;
           } else {
-            if (k === 'imageUrl' || k === 'endDate' || k === 'recurringDays') {
+            if (k === 'imageUrl' || k === 'imageUrl2' || k === 'imageUrl3' || k === 'videoUrl' || k === 'endDate' || k === 'recurringDays') {
               cleaned[k] = null;
             }
           }
@@ -657,14 +695,398 @@ export const dataService = {
     if (isFirebaseConfigured && db) {
       try {
         await setDoc(doc(db, 'pulses', 'current'), payload);
+        await setDoc(doc(db, 'pulses', 'stats'), {
+          count: increment(1)
+        }, { merge: true });
       } catch (error) {
         console.error('Failed to send pulse to Firestore:', error);
       }
     } else {
       localStorage.setItem('curcumina_ocitocina_pulse', JSON.stringify(payload));
+      const currentCount = Number(localStorage.getItem('curcumina_ocitocina_pulse_count') || '0') + 1;
+      localStorage.setItem('curcumina_ocitocina_pulse_count', String(currentCount));
+      
       if (listenersMap.pulses) {
         listenersMap.pulses.forEach((cb) => {
           try { cb(payload); } catch (_) {}
+        });
+      }
+      if (listenersMap.pulseStats) {
+        listenersMap.pulseStats.forEach((cb) => {
+          try { cb({ count: currentCount }); } catch (_) {}
+        });
+      }
+    }
+  },
+
+  subscribePulseStats(callback: (stats: { count: number }) => void): () => void {
+    if (isFirebaseConfigured && db) {
+      const unsub = onSnapshot(
+        doc(db, 'pulses', 'stats'),
+        (snapshot) => {
+          if (snapshot.exists()) {
+            callback(snapshot.data() as { count: number });
+          } else {
+            callback({ count: 0 });
+          }
+        },
+        (error) => {
+          console.error('Error listening to pulse stats:', error);
+        }
+      );
+      return unsub;
+    } else {
+      listenersMap.pulseStats.add(callback);
+      const currentCount = Number(localStorage.getItem('curcumina_ocitocina_pulse_count') || '0');
+      callback({ count: currentCount });
+      return () => {
+        listenersMap.pulseStats.delete(callback);
+      };
+    }
+  },
+
+  subscribePlaylist(callback: (playlist: PlaylistItem[]) => void): () => void {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'playlist'), orderBy('createdAt', 'asc'));
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const list: PlaylistItem[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({
+              id: docSnap.id,
+              ...(docSnap.data() as Omit<PlaylistItem, 'id'>),
+            });
+          });
+          callback(list);
+        },
+        (error) => {
+          console.error('Error listening to playlist:', error);
+        }
+      );
+      return unsubscribe;
+    } else {
+      listenersMap.playlist.add(callback);
+      const stored = localStorage.getItem('curcumina_playlist');
+      let parsed: PlaylistItem[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+      callback(parsed);
+      return () => {
+        listenersMap.playlist.delete(callback);
+      };
+    }
+  },
+
+  async addPlaylistItem(title: string, url: string, creator: string, artist?: string): Promise<void> {
+    const payload: Omit<PlaylistItem, 'id'> = {
+      title,
+      url,
+      creator,
+      createdAt: new Date().toISOString(),
+      artist: artist || '',
+    };
+    if (isFirebaseConfigured && db) {
+      await addDoc(collection(db, 'playlist'), payload);
+    } else {
+      const stored = localStorage.getItem('curcumina_playlist');
+      let parsed: PlaylistItem[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+      const newItem = {
+        id: 'pl-' + Math.random().toString(36).substr(2, 9),
+        ...payload,
+      };
+      parsed.push(newItem);
+      localStorage.setItem('curcumina_playlist', JSON.stringify(parsed));
+      if (listenersMap.playlist) {
+        listenersMap.playlist.forEach((cb) => {
+          try { cb(parsed); } catch (_) {}
+        });
+      }
+    }
+  },
+
+  async deletePlaylistItem(id: string): Promise<void> {
+    if (isFirebaseConfigured && db) {
+      await deleteDoc(doc(db, 'playlist', id));
+    } else {
+      const stored = localStorage.getItem('curcumina_playlist');
+      let parsed: PlaylistItem[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+      const filtered = parsed.filter((item) => item.id !== id);
+      localStorage.setItem('curcumina_playlist', JSON.stringify(filtered));
+      if (listenersMap.playlist) {
+        listenersMap.playlist.forEach((cb) => {
+          try { cb(filtered); } catch (_) {}
+        });
+      }
+    }
+  },
+
+  subscribeDateSuggestions(callback: (suggestions: DateSuggestion[]) => void): () => void {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'suggestions'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const list: DateSuggestion[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({
+              id: docSnap.id,
+              ...(docSnap.data() as Omit<DateSuggestion, 'id'>),
+            });
+          });
+          callback(list);
+        },
+        (error) => {
+          console.error('Error listening to suggestions:', error);
+        }
+      );
+      return unsubscribe;
+    } else {
+      listenersMap.suggestions.add(callback);
+      const stored = localStorage.getItem('curcumina_suggestions');
+      let parsed: DateSuggestion[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      } else {
+        parsed = [
+          {
+            id: 'sug-1',
+            placeName: 'Parque Farroupilha (Redenção)',
+            instagramHandle: '@parquedaredencao',
+            locationText: 'Porto Alegre - RS',
+            isChecked: true,
+            creator: 'Letícia',
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 'sug-2',
+            placeName: 'Fazer piquenique no Gasômetro',
+            instagramHandle: '@orladogasometro',
+            locationText: 'Porto Alegre - RS',
+            isChecked: false,
+            creator: 'Érica',
+            createdAt: new Date().toISOString(),
+          }
+        ];
+        localStorage.setItem('curcumina_suggestions', JSON.stringify(parsed));
+      }
+      callback(parsed);
+      return () => {
+        listenersMap.suggestions.delete(callback);
+      };
+    }
+  },
+
+  async addDateSuggestion(placeName: string, instagramHandle: string, locationText: string, creator: string, tags?: string[]): Promise<void> {
+    const payload: Omit<DateSuggestion, 'id'> = {
+      placeName,
+      instagramHandle: instagramHandle?.trim() || null,
+      locationText: locationText?.trim() || null,
+      isChecked: false,
+      creator,
+      createdAt: new Date().toISOString(),
+      tags: tags || [],
+    };
+    if (isFirebaseConfigured && db) {
+      await addDoc(collection(db, 'suggestions'), payload);
+    } else {
+      const stored = localStorage.getItem('curcumina_suggestions');
+      let parsed: DateSuggestion[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+      const newItem = {
+        id: 'sug-' + Math.random().toString(36).substr(2, 9),
+        ...payload,
+      };
+      parsed.push(newItem);
+      localStorage.setItem('curcumina_suggestions', JSON.stringify(parsed));
+      if (listenersMap.suggestions) {
+        listenersMap.suggestions.forEach((cb) => {
+          try { cb(parsed); } catch (_) {}
+        });
+      }
+    }
+  },
+
+  async updateDateSuggestion(id: string, updatedFields: Partial<DateSuggestion>): Promise<void> {
+    if (isFirebaseConfigured && db) {
+      const ref = doc(db, 'suggestions', id);
+      await updateDoc(ref, updatedFields);
+    } else {
+      const stored = localStorage.getItem('curcumina_suggestions');
+      let parsed: DateSuggestion[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+      const idx = parsed.findIndex((s) => s.id === id);
+      if (idx !== -1) {
+        parsed[idx] = { ...parsed[idx], ...updatedFields };
+        localStorage.setItem('curcumina_suggestions', JSON.stringify(parsed));
+        if (listenersMap.suggestions) {
+          listenersMap.suggestions.forEach((cb) => {
+            try { cb(parsed); } catch (_) {}
+          });
+        }
+      }
+    }
+  },
+
+  async deleteDateSuggestion(id: string): Promise<void> {
+    if (isFirebaseConfigured && db) {
+      await deleteDoc(doc(db, 'suggestions', id));
+    } else {
+      const stored = localStorage.getItem('curcumina_suggestions');
+      let parsed: DateSuggestion[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+      const filtered = parsed.filter((s) => s.id !== id);
+      localStorage.setItem('curcumina_suggestions', JSON.stringify(filtered));
+      if (listenersMap.suggestions) {
+        listenersMap.suggestions.forEach((cb) => {
+          try { cb(filtered); } catch (_) {}
+        });
+      }
+    }
+  },
+
+  subscribeLetters(callback: (letters: SecretLetter[]) => void): () => void {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'letters'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const list: SecretLetter[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({
+              id: docSnap.id,
+              ...(docSnap.data() as Omit<SecretLetter, 'id'>),
+            });
+          });
+          callback(list);
+        },
+        (error) => {
+          console.error('Error listening to letters:', error);
+        }
+      );
+      return unsubscribe;
+    } else {
+      listenersMap.letters.add(callback);
+      const stored = localStorage.getItem('curcumina_letters');
+      let parsed: SecretLetter[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      } else {
+        parsed = [
+          {
+            id: 'welcome-letter',
+            title: 'Nossa Primeira Cápsula do Tempo 🌌❤️',
+            content: 'Bem-vinda ao nosso baú de cartinhas secretas! Aqui podemos escrever cartinhas de amor uma para a outra e guardá-las em cápsulas do tempo virtuais, configurando para abrir somente em datas especiais (como nosso aniversário de namoro) ou após acumularem novos pulsos de ocitocina uma para a outra! Escreva a primeira cartinha clicando no botão abaixo! Com todo amor do mundo, Érica & Letícia.',
+            sender: 'Érica',
+            recipient: 'Letícia',
+            createdAt: new Date().toISOString(),
+            unlockType: 'date',
+            unlockValue: new Date().toISOString().split('T')[0],
+            isOpened: true,
+            createdPulseCount: 0
+          }
+        ];
+        localStorage.setItem('curcumina_letters', JSON.stringify(parsed));
+      }
+      callback(parsed);
+      return () => {
+        listenersMap.letters.delete(callback);
+      };
+    }
+  },
+
+  async addLetter(
+    title: string,
+    content: string,
+    sender: string,
+    recipient: string,
+    unlockType: 'date' | 'pulses',
+    unlockValue: string,
+    createdPulseCount: number
+  ): Promise<void> {
+    const payload: Omit<SecretLetter, 'id'> = {
+      title,
+      content,
+      sender,
+      recipient,
+      unlockType,
+      unlockValue,
+      createdAt: new Date().toISOString(),
+      isOpened: false,
+      createdPulseCount,
+    };
+    if (isFirebaseConfigured && db) {
+      await addDoc(collection(db, 'letters'), payload);
+    } else {
+      const stored = localStorage.getItem('curcumina_letters');
+      let parsed: SecretLetter[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+      const newItem = {
+        id: 'letter-' + Math.random().toString(36).substr(2, 9),
+        ...payload,
+      };
+      parsed.push(newItem);
+      localStorage.setItem('curcumina_letters', JSON.stringify(parsed));
+      if (listenersMap.letters) {
+        listenersMap.letters.forEach((cb) => {
+          try { cb(parsed); } catch (_) {}
+        });
+      }
+    }
+  },
+
+  async updateLetter(id: string, updatedFields: Partial<SecretLetter>): Promise<void> {
+    if (isFirebaseConfigured && db) {
+      const ref = doc(db, 'letters', id);
+      await updateDoc(ref, updatedFields);
+    } else {
+      const stored = localStorage.getItem('curcumina_letters');
+      let parsed: SecretLetter[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+      const idx = parsed.findIndex((l) => l.id === id);
+      if (idx !== -1) {
+        parsed[idx] = { ...parsed[idx], ...updatedFields };
+        localStorage.setItem('curcumina_letters', JSON.stringify(parsed));
+        if (listenersMap.letters) {
+          listenersMap.letters.forEach((cb) => {
+            try { cb(parsed); } catch (_) {}
+          });
+        }
+      }
+    }
+  },
+
+  async deleteLetter(id: string): Promise<void> {
+    if (isFirebaseConfigured && db) {
+      await deleteDoc(doc(db, 'letters', id));
+    } else {
+      const stored = localStorage.getItem('curcumina_letters');
+      let parsed: SecretLetter[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+      const filtered = parsed.filter((l) => l.id !== id);
+      localStorage.setItem('curcumina_letters', JSON.stringify(filtered));
+      if (listenersMap.letters) {
+        listenersMap.letters.forEach((cb) => {
+          try { cb(filtered); } catch (_) {}
         });
       }
     }

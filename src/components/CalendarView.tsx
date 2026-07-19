@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ChevronLeft,
@@ -22,7 +22,8 @@ import {
   Video,
   BookOpen,
 } from 'lucide-react';
-import { CalendarEvent, CATEGORY_COLORS, EventCategory } from '../types';
+import { CalendarEvent, CATEGORY_COLORS, EventCategory, DateSuggestion } from '../types';
+import { dataService } from '../services/dataService';
 import { isEventOnDate, parseLocalDate, formatDateBr } from '../utils/dashboardCalculations';
 
 interface CalendarViewProps {
@@ -57,7 +58,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const [category, setCategory] = useState<EventCategory>('Outros');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringDays, setRecurringDays] = useState(14); // default quinzenal
+  const [includeInMonthlyCount, setIncludeInMonthlyCount] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
+  const [imageUrl2, setImageUrl2] = useState('');
+  const [imageUrl3, setImageUrl3] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [activeMediaTab, setActiveMediaTab] = useState<'photo1' | 'photo2' | 'photo3' | 'video'>('photo1');
+
+  // Additional fields for location, @instagram and linked suggestions
+  const [locationText, setLocationText] = useState('');
+  const [instagramHandle, setInstagramHandle] = useState('');
+  const [relatedDateSuggestionId, setRelatedDateSuggestionId] = useState('');
+  const [suggestions, setSuggestions] = useState<DateSuggestion[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = dataService.subscribeDateSuggestions((data) => {
+      setSuggestions(data);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Camera Capture Feature states
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -175,6 +194,51 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     }
   };
 
+  const handleImage2Upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const compressed = await compressAndResizeImage(file);
+        if (compressed) {
+          setImageUrl2(compressed);
+        }
+      } catch (err) {
+        console.error('Erro ao comprimir imagem 2:', err);
+      }
+    }
+  };
+
+  const handleImage3Upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const compressed = await compressAndResizeImage(file);
+        if (compressed) {
+          setImageUrl3(compressed);
+        }
+      } catch (err) {
+        console.error('Erro ao comprimir imagem 3:', err);
+      }
+    }
+  };
+
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 8 * 1024 * 1024) {
+        alert('Este vídeo é um pouco pesado (limite de 8MB sugerido para velocidade de carregamento). Considere carregar em partes ou usar link direto.');
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setVideoUrl(event.target?.result as string);
+      };
+      reader.onerror = () => {
+        alert('Falha ao processar arquivo de vídeo.');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const months = [
     'Janeiro',
@@ -253,7 +317,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     setCategory('Outros');
     setIsRecurring(false);
     setRecurringDays(14);
+    setIncludeInMonthlyCount(false);
     setImageUrl('');
+    setImageUrl2('');
+    setImageUrl3('');
+    setVideoUrl('');
+    setLocationText('');
+    setInstagramHandle('');
+    setRelatedDateSuggestionId('');
     setEditingEvent(null);
     stopCamera();
   };
@@ -266,7 +337,31 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     setCategory(evt.category);
     setIsRecurring(evt.isRecurring);
     setRecurringDays(evt.recurringDays || 14);
+    setIncludeInMonthlyCount(evt.includeInMonthlyCount || false);
     setImageUrl(evt.imageUrl || '');
+    setImageUrl2(evt.imageUrl2 || '');
+    setImageUrl3(evt.imageUrl3 || '');
+    setVideoUrl(evt.videoUrl || '');
+    setLocationText(evt.locationText || '');
+    setInstagramHandle(evt.instagramHandle || '');
+    setRelatedDateSuggestionId(evt.relatedDateSuggestionId || '');
+  };
+
+  const handleSelectRelatedSuggestion = (suggestionId: string) => {
+    setRelatedDateSuggestionId(suggestionId);
+    if (suggestionId) {
+      const found = suggestions.find((s) => s.id === suggestionId);
+      if (found) {
+        setLocationText(found.locationText || '');
+        setInstagramHandle(found.instagramHandle || '');
+        if (!title.trim()) {
+          setTitle(`Date no ${found.placeName}`);
+        }
+      }
+    } else {
+      setLocationText('');
+      setInstagramHandle('');
+    }
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -283,6 +378,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       recurringDays: isRecurring ? Number(recurringDays) : undefined,
       creator: currentProfile,
       imageUrl: imageUrl || undefined,
+      imageUrl2: imageUrl2 || undefined,
+      imageUrl3: imageUrl3 || undefined,
+      videoUrl: videoUrl || undefined,
+      locationText: locationText || undefined,
+      instagramHandle: instagramHandle || undefined,
+      relatedDateSuggestionId: relatedDateSuggestionId || undefined,
+      includeInMonthlyCount: (category === 'Rolês com Amigos & Família' || category === 'Outros') ? includeInMonthlyCount : undefined,
     };
 
     try {
@@ -396,6 +498,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   <span />
                 )}
                 <div className="flex items-center gap-1.5">
+                  {cellsEvents.some((evt) => evt.locationText || evt.instagramHandle) && (
+                    <span className="text-[10px] select-none text-sky-600 shrink-0" title="Contém localização vinculada">📍</span>
+                  )}
                   {cellsEvents.some((evt) => evt.imageUrl) && (
                     <Camera size={11} className="text-amber-600 shrink-0 select-none animate-pulse" title="Contém registro fotográfico" />
                   )}
@@ -595,21 +700,93 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                                 </p>
                               )}
 
-                              {evt.imageUrl && (
-                                <div className="my-2.5 shrink-0 inline-block bg-white p-2 pb-5 border border-stone-250 rounded shadow-xs rotate-[-1.5deg] hover:rotate-0 transition-all duration-300">
-                                  <div className="w-[140px] h-[100px] bg-[#faf8f5] overflow-hidden relative">
-                                    <img
-                                      src={evt.imageUrl}
-                                      alt={evt.title}
-                                      className="w-full h-full object-cover"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                  </div>
-                                  <div className="mt-1.5 text-center font-handwritten text-[11.5px] text-rose-600 font-bold leading-none select-none">
-                                    reação de afeto
-                                  </div>
+                              {(evt.locationText || evt.instagramHandle) && (
+                                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] bg-white/50 px-2 py-1 rounded-lg border border-white/70 w-fit my-1.5 font-medium text-slate-700">
+                                  {evt.locationText && (
+                                    <span className="flex items-center gap-0.5">
+                                      <span className="text-sky-600">📍</span>
+                                      {evt.locationText}
+                                    </span>
+                                  )}
+                                  {evt.instagramHandle && (
+                                    <a
+                                      href={`https://instagram.com/${evt.instagramHandle.replace(/^@/, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-0.5 text-pink-600 hover:underline font-semibold"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <span>📸</span>
+                                      {evt.instagramHandle}
+                                    </a>
+                                  )}
                                 </div>
                               )}
+
+                              {/* Media gallery in drawer */}
+                              <div className="flex flex-wrap gap-3 my-2.5">
+                                {evt.imageUrl && (
+                                  <div className="shrink-0 inline-block bg-white p-2 pb-5 border border-stone-250 rounded shadow-xs rotate-[-1.5deg] hover:rotate-0 transition-all duration-300">
+                                    <div className="w-[120px] h-[90px] bg-[#faf8f5] overflow-hidden relative">
+                                      <img
+                                        src={evt.imageUrl}
+                                        alt={evt.title}
+                                        className="w-full h-full object-cover"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    </div>
+                                    <div className="mt-1 text-center font-handwritten text-[10px] text-rose-600 font-bold leading-none select-none">
+                                      foto principal 📸
+                                    </div>
+                                  </div>
+                                )}
+
+                                {evt.imageUrl2 && (
+                                  <div className="shrink-0 inline-block bg-white p-2 pb-5 border border-stone-250 rounded shadow-xs rotate-[2deg] hover:rotate-0 transition-all duration-300">
+                                    <div className="w-[120px] h-[90px] bg-[#faf8f5] overflow-hidden relative">
+                                      <img
+                                        src={evt.imageUrl2}
+                                        alt={evt.title}
+                                        className="w-full h-full object-cover"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    </div>
+                                    <div className="mt-1 text-center font-handwritten text-[10px] text-amber-600 font-bold leading-none select-none">
+                                      registro 💫
+                                    </div>
+                                  </div>
+                                )}
+
+                                {evt.imageUrl3 && (
+                                  <div className="shrink-0 inline-block bg-white p-2 pb-5 border border-stone-250 rounded shadow-xs rotate-[-2deg] hover:rotate-0 transition-all duration-300">
+                                    <div className="w-[120px] h-[90px] bg-[#faf8f5] overflow-hidden relative">
+                                      <img
+                                        src={evt.imageUrl3}
+                                        alt={evt.title}
+                                        className="w-full h-full object-cover"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    </div>
+                                    <div className="mt-1 text-center font-handwritten text-[10px] text-rose-500 font-bold leading-none select-none">
+                                      lembrança ✨
+                                    </div>
+                                  </div>
+                                )}
+
+                                {evt.videoUrl && (
+                                  <div className="shrink-0 inline-block bg-white p-2 pb-5 border border-stone-250 rounded shadow-xs rotate-[1deg] hover:rotate-0 transition-all duration-300">
+                                    <div className="w-[120px] h-[90px] bg-black overflow-hidden relative">
+                                      <video
+                                        src={evt.videoUrl}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                    <div className="mt-1 text-center font-handwritten text-[10px] text-indigo-600 font-bold leading-none select-none">
+                                      vídeo 🎥
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
 
                               {/* Footer elements */}
                               <div className="flex items-center gap-4 text-[9px] text-slate-500 font-bold font-mono pt-1">
@@ -690,97 +867,311 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     />
                   </div>
 
-                  {/* Recordação do Date (Photo Upload) */}
-                  <div className="space-y-1 p-3 bg-stone-50 border border-stone-200 rounded-xl">
+                  {/* Location & Linked Date Suggestion */}
+                  <div className="space-y-3 p-3.5 bg-sky-50/25 border border-sky-100/40 rounded-2xl">
+                    <label className="text-[10px] font-bold font-mono uppercase text-sky-600 tracking-wider flex items-center gap-1.5">
+                      <span>📍 Localização & @Instagram</span>
+                    </label>
+
+                    {/* Related Date Suggestion Link Dropdown */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 font-mono">
+                        VINCULAR A UM DATE PLANEJADO
+                      </label>
+                      <select
+                        value={relatedDateSuggestionId}
+                        onChange={(e) => handleSelectRelatedSuggestion(e.target.value)}
+                        className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:border-amber-400 font-semibold"
+                      >
+                        <option value="">-- Não vincular (ou criar avulso) --</option>
+                        {suggestions.map((sug) => (
+                          <option key={sug.id} value={sug.id}>
+                            {sug.placeName} {sug.instagramHandle ? `(${sug.instagramHandle})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Location Text */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-500 font-mono">
+                          NOME DO LOCAL / ENDEREÇO
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Cinema, Shopping, Praia..."
+                          value={locationText}
+                          onChange={(e) => setLocationText(e.target.value)}
+                          className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:border-amber-400 font-medium"
+                        />
+                      </div>
+
+                      {/* Instagram Handle */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-500 font-mono">
+                          @ DO INSTAGRAM
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: @cinepolis"
+                          value={instagramHandle}
+                          onChange={(e) => setInstagramHandle(e.target.value)}
+                          className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:border-amber-400 font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recordações do Date (Multiple Photos & Video Support) */}
+                  <div className="space-y-2 p-3 bg-stone-50 border border-stone-200 rounded-xl">
                     <label className="text-[10px] font-bold font-mono uppercase text-rose-500 tracking-wider flex items-center gap-1">
                       <Sparkles size={11} className="text-rose-500 shrink-0" />
-                      Visual de Recordação (Foto)
+                      Painel de Recordações (Dump do Dia)
                     </label>
-                    
-                    {imageUrl ? (
-                      <div className="relative w-full h-[120px] bg-stone-100 rounded-lg overflow-hidden border border-stone-250 animate-fade-in">
-                        <img
-                          src={imageUrl}
-                          alt="Nossa Foto"
-                          className="w-full h-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setImageUrl('')}
-                          className="absolute top-1.5 right-1.5 px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-mono text-[8.5px] font-bold rounded-md shadow-sm transition-colors uppercase"
-                        >
-                          Remover Foto
-                        </button>
-                      </div>
-                    ) : isCameraActive ? (
-                      <div className="space-y-2 border border-dashed border-rose-300 p-2 rounded-lg bg-rose-50/20 text-center animate-fade-in">
-                        <div className="relative w-full h-[200px] bg-black rounded-lg overflow-hidden border border-stone-300">
-                          <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            className="w-full h-full object-cover scale-x-[-1]"
-                          />
-                          <div className="absolute top-1.5 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-black/70 text-white text-[8px] font-bold font-mono rounded tracking-wider uppercase">
-                            Câmera Ativa (Selfie)
+
+                    {/* Tab Navigation buttons */}
+                    <div className="flex gap-1 border-b border-stone-200 pb-2 overflow-x-auto">
+                      {(['photo1', 'photo2', 'photo3', 'video'] as const).map((tab) => {
+                        const isSel = activeMediaTab === tab;
+                        const label = 
+                          tab === 'photo1' ? 'Foto 1 📸' :
+                          tab === 'photo2' ? 'Foto 2 💫' :
+                          tab === 'photo3' ? 'Foto 3 ✨' : 'Vídeo 🎥';
+                        const hasVal = 
+                          tab === 'photo1' ? !!imageUrl :
+                          tab === 'photo2' ? !!imageUrl2 :
+                          tab === 'photo3' ? !!imageUrl3 : !!videoUrl;
+
+                        return (
+                          <button
+                            key={tab}
+                            type="button"
+                            onClick={() => setActiveMediaTab(tab)}
+                            className={`px-2 py-1.5 font-mono text-[9px] font-bold uppercase rounded-md tracking-tight shrink-0 transition-all ${
+                              isSel 
+                                ? 'bg-stone-900 text-white' 
+                                : 'bg-white hover:bg-stone-100 text-stone-650 border border-stone-200/60'
+                            } ${hasVal ? 'border-rose-400 border' : ''}`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Tab 1 Content (Photo 1) */}
+                    {activeMediaTab === 'photo1' && (
+                      <div className="space-y-3 pt-1">
+                        {imageUrl ? (
+                          <div className="relative w-full h-[120px] bg-stone-100 rounded-lg overflow-hidden border border-stone-250">
+                            <img
+                              src={imageUrl}
+                              alt="Foto 1"
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setImageUrl('')}
+                              className="absolute top-1.5 right-1.5 px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-mono text-[8.5px] font-bold rounded-md shadow-sm transition-colors uppercase"
+                            >
+                              Remover Foto 1
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex gap-2 justify-center">
-                          <button
-                            type="button"
-                            onClick={capturePhoto}
-                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold font-mono text-[10px] rounded-lg tracking-wide flex items-center gap-1.5 hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
-                          >
-                            <Camera size={12} />
-                            Capturar Polaroid
-                          </button>
-                          <button
-                            type="button"
-                            onClick={stopCamera}
-                            className="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold font-mono text-[10px] rounded-lg tracking-wide hover:scale-[1.02] active:scale-95 transition-all"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
+                        ) : isCameraActive ? (
+                          <div className="space-y-2 border border-dashed border-rose-300 p-2 rounded-lg bg-rose-50/20 text-center">
+                            <div className="relative w-full h-[200px] bg-black rounded-lg overflow-hidden border border-stone-300">
+                              <video
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                className="w-full h-full object-cover scale-x-[-1]"
+                              />
+                            </div>
+                            <div className="flex gap-2 justify-center">
+                              <button
+                                type="button"
+                                onClick={capturePhoto}
+                                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold font-mono text-[10px] rounded-lg flex items-center gap-1.5"
+                              >
+                                <Camera size={12} />
+                                Capturar Polaroid
+                              </button>
+                              <button
+                                type="button"
+                                onClick={stopCamera}
+                                className="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold font-mono text-[10px] rounded-lg"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="flex flex-col items-center justify-center p-3 border border-stone-250 rounded-xl bg-white hover:bg-stone-50 cursor-pointer transition-colors shadow-2xs h-[64px]">
+                                <Plus size={14} className="text-stone-600 mb-0.5" />
+                                <span className="text-[9.5px] font-bold text-stone-700 font-mono text-center">Do Dispositivo</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleImageUpload}
+                                  className="hidden"
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={startCamera}
+                                className="flex flex-col items-center justify-center p-3 border border-rose-200 rounded-xl bg-rose-50/40 hover:bg-rose-50 cursor-pointer transition-colors shadow-2xs h-[64px]"
+                              >
+                                <Camera size={14} className="text-rose-500 mb-0.5" />
+                                <span className="text-[9.5px] font-bold text-rose-700 font-mono text-center">Tirar da Câmera</span>
+                              </button>
+                            </div>
+                            <div className="text-[8.5px] text-stone-500 font-mono text-center">&mdash; OU COLA LINK &mdash;</div>
+                            <input
+                              type="text"
+                              placeholder="Link da imagem 1..."
+                              value={imageUrl}
+                              onChange={(e) => setImageUrl(e.target.value)}
+                              className="w-full text-[10px] px-2.5 py-1.5 rounded-lg border border-stone-250 bg-white text-stone-800 focus:outline-none focus:border-amber-400 font-mono"
+                            />
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="relative">
+                    )}
+
+                    {/* Tab 2 Content (Photo 2) */}
+                    {activeMediaTab === 'photo2' && (
+                      <div className="space-y-3 pt-1">
+                        {imageUrl2 ? (
+                          <div className="relative w-full h-[120px] bg-stone-100 rounded-lg overflow-hidden border border-stone-250">
+                            <img
+                              src={imageUrl2}
+                              alt="Foto 2"
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setImageUrl2('')}
+                              className="absolute top-1.5 right-1.5 px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-mono text-[8.5px] font-bold rounded-md shadow-sm transition-colors uppercase"
+                            >
+                              Remover Foto 2
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
                             <label className="flex flex-col items-center justify-center p-3 border border-stone-250 rounded-xl bg-white hover:bg-stone-50 cursor-pointer transition-colors shadow-2xs h-[64px]">
                               <Plus size={14} className="text-stone-600 mb-0.5" />
                               <span className="text-[9.5px] font-bold text-stone-700 font-mono text-center">Do Dispositivo</span>
                               <input
                                 type="file"
                                 accept="image/*"
-                                onChange={handleImageUpload}
+                                onChange={handleImage2Upload}
                                 className="hidden"
                               />
                             </label>
+                            <div className="text-[8.5px] text-stone-500 font-mono text-center">&mdash; OU COLA LINK &mdash;</div>
+                            <input
+                              type="text"
+                              placeholder="Link da imagem 2..."
+                              value={imageUrl2}
+                              onChange={(e) => setImageUrl2(e.target.value)}
+                              className="w-full text-[10px] px-2.5 py-1.5 rounded-lg border border-stone-250 bg-white text-stone-800 focus:outline-none focus:border-amber-400 font-mono"
+                            />
                           </div>
-                          
-                          <button
-                            type="button"
-                            onClick={startCamera}
-                            className="flex flex-col items-center justify-center p-3 border border-rose-200 rounded-xl bg-rose-50/40 hover:bg-rose-50 cursor-pointer transition-colors shadow-2xs h-[64px]"
-                          >
-                            <Camera size={14} className="text-rose-500 mb-0.5" />
-                            <span className="text-[9.5px] font-bold text-rose-700 font-mono text-center">Tirar da Câmera</span>
-                          </button>
-                        </div>
-                        
-                        <div className="text-[8.5px] text-stone-500 font-mono text-center">
-                          &mdash; OU COLA LINK DE IMAGEM &mdash;
-                        </div>
-                        
-                        <input
-                          type="text"
-                          placeholder="Cole um link de imagem da web (ex: https://...)"
-                          value={imageUrl}
-                          onChange={(e) => setImageUrl(e.target.value)}
-                          className="w-full text-[10px] px-2.5 py-1.5 rounded-lg border border-stone-250 bg-white text-stone-800 placeholder-stone-450 focus:outline-none focus:border-amber-400 transition-colors font-mono"
-                        />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tab 3 Content (Photo 3) */}
+                    {activeMediaTab === 'photo3' && (
+                      <div className="space-y-3 pt-1">
+                        {imageUrl3 ? (
+                          <div className="relative w-full h-[120px] bg-stone-100 rounded-lg overflow-hidden border border-stone-250">
+                            <img
+                              src={imageUrl3}
+                              alt="Foto 3"
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setImageUrl3('')}
+                              className="absolute top-1.5 right-1.5 px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-mono text-[8.5px] font-bold rounded-md shadow-sm transition-colors uppercase"
+                            >
+                              Remover Foto 3
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <label className="flex flex-col items-center justify-center p-3 border border-stone-250 rounded-xl bg-white hover:bg-stone-50 cursor-pointer transition-colors shadow-2xs h-[64px]">
+                              <Plus size={14} className="text-stone-600 mb-0.5" />
+                              <span className="text-[9.5px] font-bold text-stone-700 font-mono text-center">Do Dispositivo</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImage3Upload}
+                                className="hidden"
+                              />
+                            </label>
+                            <div className="text-[8.5px] text-stone-500 font-mono text-center">&mdash; OU COLA LINK &mdash;</div>
+                            <input
+                              type="text"
+                              placeholder="Link da imagem 3..."
+                              value={imageUrl3}
+                              onChange={(e) => setImageUrl3(e.target.value)}
+                              className="w-full text-[10px] px-2.5 py-1.5 rounded-lg border border-stone-250 bg-white text-stone-800 focus:outline-none focus:border-amber-400 font-mono"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tab 4 Content (Video) */}
+                    {activeMediaTab === 'video' && (
+                      <div className="space-y-3 pt-1">
+                        {videoUrl ? (
+                          <div className="space-y-2">
+                            <div className="relative w-full h-[120px] bg-black rounded-lg overflow-hidden border border-stone-250">
+                              <video
+                                src={videoUrl}
+                                controls
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setVideoUrl('')}
+                              className="w-full py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-mono text-[8.5px] font-bold rounded-md shadow-sm transition-colors uppercase"
+                            >
+                              Remover Vídeo
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <label className="flex flex-col items-center justify-center p-3 border border-stone-250 rounded-xl bg-white hover:bg-stone-50 cursor-pointer transition-colors shadow-2xs h-[64px]">
+                              <Plus size={14} className="text-stone-600 mb-0.5" />
+                              <span className="text-[9.5px] font-bold text-stone-700 font-mono text-center">Carregar Vídeo (.mp4)</span>
+                              <input
+                                type="file"
+                                accept="video/*"
+                                onChange={handleVideoUpload}
+                                className="hidden"
+                              />
+                            </label>
+                            <div className="text-[8.5px] text-stone-500 font-mono text-center">&mdash; OU COLA LINK DIRETO &mdash;</div>
+                            <input
+                              type="text"
+                              placeholder="Link direto de vídeo (ex: YouTube embed ou link MP4)..."
+                              value={videoUrl}
+                              onChange={(e) => setVideoUrl(e.target.value)}
+                              className="w-full text-[10px] px-2.5 py-1.5 rounded-lg border border-stone-250 bg-white text-stone-800 focus:outline-none focus:border-amber-400 font-mono"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -797,13 +1188,37 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         onChange={(e) => setCategory(e.target.value as EventCategory)}
                         className="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:border-amber-400 transition-colors font-bold"
                       >
-                        <option value="Conchinha de Manutenção">Conchinha de Manutenção</option>
-                        <option value="Date de Exploração">Date de Exploração</option>
-                        <option value="Casa da Mãe - SM">Casa da Mãe - SM</option>
+                        <option value="Conchinhas de Manutenção">Conchinhas de Manutenção</option>
+                        <option value="Dates de Exploração">Dates de Exploração</option>
+                        <option value="Hasta Home - SM">Hasta Home - SM</option>
                         <option value="Compromissos de Trabalho">Compromissos de Trabalho</option>
+                        <option value="Saúde&Autocuidado">Saúde&Autocuidado</option>
+                        <option value="Momentos Solo">Momentos Solo (Ela não estava comigo)</option>
+                        <option value="Dates em Casa">Dates em Casa</option>
+                        <option value="Viagens & Aventuras">Viagens & Aventuras</option>
+                        <option value="Rolês com Amigos & Família">Rolês com Amigos & Família</option>
                         <option value="Outros">Outros</option>
                       </select>
                     </div>
+
+                    {/* Conditional checkbox for dynamic categories */}
+                    {(category === 'Rolês com Amigos & Família' || category === 'Outros') && (
+                      <div className="col-span-2 p-3.5 bg-amber-50/50 border border-amber-200/40 rounded-2xl flex items-start gap-2.5">
+                        <input
+                          type="checkbox"
+                          id="includeInMonthlyCount"
+                          checked={includeInMonthlyCount}
+                          onChange={(e) => setIncludeInMonthlyCount(e.target.checked)}
+                          className="mt-0.5 w-4 h-4 text-amber-500 border-amber-300 rounded-sm focus:ring-amber-400 cursor-pointer shrink-0"
+                        />
+                        <label
+                          htmlFor="includeInMonthlyCount"
+                          className="text-xs font-bold text-slate-700 cursor-pointer select-none leading-tight"
+                        >
+                          Este evento entra na contagem/conferência do mês de dates?
+                        </label>
+                      </div>
+                    )}
 
                     {/* Date field (Data Início and Data Fim) */}
                     <div className="space-y-1">
