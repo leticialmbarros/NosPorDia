@@ -140,6 +140,7 @@ export interface SecretLetter {
   unlockValue: string; // Date (YYYY-MM-DD) or number of pulses required
   isOpened: boolean;
   createdPulseCount?: number; // Number of pulses at creation time
+  audioUrl?: string; // Optional recorded audio note
 }
 
 export interface CompoundEssay {

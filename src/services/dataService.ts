@@ -1147,7 +1147,8 @@ export const dataService = {
     recipient: string,
     unlockType: 'date' | 'pulses',
     unlockValue: string,
-    createdPulseCount: number
+    createdPulseCount: number,
+    audioUrl?: string
   ): Promise<void> {
     const payload: Omit<SecretLetter, 'id'> = {
       title,
@@ -1159,6 +1160,7 @@ export const dataService = {
       createdAt: new Date().toISOString(),
       isOpened: false,
       createdPulseCount,
+      ...(audioUrl ? { audioUrl } : {}),
     };
     if (isFirebaseConfigured && db) {
       await addDoc(collection(db, 'letters'), payload);
@@ -1207,20 +1209,25 @@ export const dataService = {
 
   async deleteLetter(id: string): Promise<void> {
     if (isFirebaseConfigured && db) {
-      await deleteDoc(doc(db, 'letters', id));
-    } else {
-      const stored = localStorage.getItem('curcumina_letters');
-      let parsed: SecretLetter[] = [];
-      if (stored) {
-        try { parsed = JSON.parse(stored); } catch (_) {}
+      try {
+        await deleteDoc(doc(db, 'letters', id));
+      } catch (error) {
+        console.warn('Firestore delete letter failed, falling back to local update:', error);
       }
-      const filtered = parsed.filter((l) => l.id !== id);
-      localStorage.setItem('curcumina_letters', JSON.stringify(filtered));
-      if (listenersMap.letters) {
-        listenersMap.letters.forEach((cb) => {
-          try { cb(filtered); } catch (_) {}
-        });
-      }
+    }
+    
+    // Always update local storage and notify listeners to ensure immediate UI feedback
+    const stored = localStorage.getItem('curcumina_letters');
+    let parsed: SecretLetter[] = [];
+    if (stored) {
+      try { parsed = JSON.parse(stored); } catch (_) {}
+    }
+    const filtered = parsed.filter((l) => l.id !== id);
+    localStorage.setItem('curcumina_letters', JSON.stringify(filtered));
+    if (listenersMap.letters) {
+      listenersMap.letters.forEach((cb) => {
+        try { cb(filtered); } catch (_) {}
+      });
     }
   },
 

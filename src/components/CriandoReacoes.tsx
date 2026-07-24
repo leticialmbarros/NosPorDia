@@ -326,7 +326,7 @@ export const CriandoReacoes: React.FC<CriandoReacoesProps> = ({ currentProfile }
               LABSOM
             </span>
           </div>
-          <h2 id="reacoes-title" className="text-3xl md:text-4xl text-stone-900 font-serif font-bold tracking-tight">
+          <h2 id="reacoes-title" className="text-3xl sm:text-4xl text-rose-600 font-cursive tracking-wide select-none leading-none">
             Criando Reações
           </h2>
           <p id="reacoes-desc" className="text-[11px] text-stone-605 font-mono leading-relaxed mt-2 uppercase font-bold tracking-tight text-slate-500">

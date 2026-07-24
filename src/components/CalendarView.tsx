@@ -417,19 +417,26 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   return (
     <div id="calendar-view-panel" className="bg-[#FCFAF6] border border-amber-250/50 rounded-2xl p-5 md:p-6 shadow-xs relative text-stone-800">
-      {/* Calendar Header with navigation */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Calendar Header with navigation matching standard section header format */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-stone-200/60 pb-4">
         <div>
-          <h2 className="text-4xl md:text-5xl text-rose-600 font-cursive tracking-wide select-none flex items-center gap-1.5 leading-none">
-            <span>{months[viewedMonth].toLowerCase()}</span>
-            <span className="text-[10px] font-mono font-bold text-stone-400 tracking-wider">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="p-1.5 bg-rose-50 border border-rose-200 rounded-lg">
+              <Beaker className="text-rose-500 animate-pulse" size={16} />
+            </div>
+            <span className="text-[10px] uppercase tracking-widest font-mono font-bold text-rose-600">
+              Calendário de Sintonia
+            </span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl text-rose-600 font-cursive tracking-wide select-none flex items-center gap-2 leading-none">
+            <span className="capitalize">{months[viewedMonth]}</span>
+            <span className="text-xs font-mono font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200">
               {viewedYear}
             </span>
           </h2>
-          <span className="text-[9.5px] text-rose-600 font-semibold font-mono uppercase tracking-wider flex items-center gap-1">
-            <Beaker size={11} className="text-rose-500 animate-pulse shrink-0" />
-            Sintonia Farmacocinética: Dosagem Diária de Dengo, Ocitocina & Curcumina em Agitação Térmica Constante ❤️
-          </span>
+          <p className="text-[10.5px] text-stone-550 font-mono leading-relaxed mt-1">
+            Dosagem Diária de Dengo, Ocitocina & Curcumina em Agitação Térmica Constante ❤️
+          </p>
         </div>
 
         <div className="flex items-center gap-1.5">

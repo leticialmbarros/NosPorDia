@@ -184,7 +184,7 @@ export const MemoryAlbum: React.FC<MemoryAlbumProps> = ({ events }) => {
             <Camera size={12} className="stroke-[2.2]" />
             Nosso Álbum de Recordações
           </span>
-          <h3 className="text-2xl font-bold font-serif text-stone-900 flex items-center gap-2 mt-1">
+          <h3 className="text-3xl sm:text-4xl text-rose-600 font-cursive tracking-wide select-none flex items-center gap-2 mt-1 leading-none">
             Mural de Afetos Estáveis 
           </h3>
           <p className="text-xs text-stone-605 font-bold font-mono mt-0.5">

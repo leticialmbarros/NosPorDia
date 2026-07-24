@@ -43,15 +43,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div id="dashboard-sector-panel" className="bg-[#FCFAF6] border border-amber-250/50 rounded-2xl p-5 md:p-6 shadow-xs relative text-stone-800">
-      {/* Title block like the other sections */}
-      <div className="mb-6">
-        <h2 className="text-4xl md:text-5xl text-rose-600 font-cursive tracking-wide select-none flex items-center gap-1.5 leading-none">
+      {/* Title block matching standard section format */}
+      <div className="mb-5 border-b border-stone-200/60 pb-4">
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="p-1.5 bg-rose-50 border border-rose-200 rounded-lg">
+            <Sparkles className="text-rose-500 animate-pulse" size={16} />
+          </div>
+          <span className="text-[10px] uppercase tracking-widest font-mono font-bold text-rose-600">
+            Visão Geral
+          </span>
+        </div>
+        <h2 className="text-3xl sm:text-4xl md:text-5xl text-rose-600 font-cursive tracking-wide select-none leading-none">
           Painel de Reações
         </h2>
-        <span className="text-[9.5px] text-rose-600 font-semibold font-mono uppercase tracking-wider flex items-center gap-1 mt-1">
-          <Sparkles size={11} className="text-rose-500 animate-pulse shrink-0" />
+        <p className="text-[10.5px] text-stone-550 font-mono leading-relaxed mt-1">
           Análise de Equilíbrio Químico, Saturação Afetiva & Estados Estáveis de Convivência ❤️
-        </span>
+        </p>
       </div>
 
       <motion.div

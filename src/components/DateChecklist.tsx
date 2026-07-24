@@ -181,7 +181,7 @@ export const DateChecklist: React.FC<DateChecklistProps> = ({ currentProfile }) 
               Checklist de Aventuras
             </span>
           </div>
-          <h2 className="text-2xl md:text-3xl text-stone-900 font-serif font-bold tracking-tight">
+          <h2 className="text-3xl sm:text-4xl text-rose-600 font-cursive tracking-wide select-none leading-none">
             Dates por ai...
           </h2>
           <p className="text-[10.5px] text-stone-550 font-mono leading-relaxed max-w-xl">

@@ -170,9 +170,9 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FDF9F5] text-stone-800 flex flex-col font-sans transition-colors duration-300 relative notranslate">
+    <div className="min-h-screen bg-[#FDF9F5] text-stone-800 flex flex-col font-sans transition-colors duration-500 relative notranslate">
       
-      {/* Dynamic Background scientific grids with custom warm rosy color overlays */}
+      {/* Dynamic Background scientific grids with custom color overlays */}
       <div className="absolute inset-x-0 top-0 h-[600px] bg-[linear-gradient(to_right,#EADCDD_1px,transparent_1px),linear-gradient(to_bottom,#EADCDD_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-70 pointer-events-none" />
 
       {/* Beautiful drawings of flasks, DNA spirals and elements from our uploaded references */}
@@ -198,41 +198,41 @@ export default function App() {
       )}
 
       {/* Page Header */}
-      <header className="relative border-b border-rose-100 bg-[#FCF6F2]/85 backdrop-blur-md z-20 px-4 py-3.5 md:px-8">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <header className="relative border-b z-20 px-3.5 py-3 md:px-8 bg-[#FCF6F2]/85 border-rose-100 backdrop-blur-md text-stone-800 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           
           {/* Logo element */}
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-rose-500 shadow-xs flex items-center justify-center text-white font-sans font-bold text-2xl border border-rose-450">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-500 shadow-xs flex items-center justify-center text-white font-sans font-bold text-xl sm:text-2xl border border-rose-450 shrink-0">
               ⚢
             </div>
             <div>
               <div className="flex items-center gap-1.5 leading-none">
-                <h1 className="text-4xl md:text-5xl text-rose-600 font-cursive select-none leading-none tracking-wide mt-1.5">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl text-rose-600 font-cursive select-none leading-none tracking-wide mt-1">
                   NósPorDia
                 </h1>
-                <span className="hidden leading-none xs:inline-flex items-center gap-1.5 text-[9px] px-1.5 py-0.5 rounded-md font-extrabold font-mono tracking-wider bg-rose-50 text-rose-600 border border-rose-100">
+                <span className="hidden sm:inline-flex leading-none items-center gap-1.5 text-[9px] px-1.5 py-0.5 rounded-md font-extrabold font-mono tracking-wider bg-rose-50 text-rose-600 border border-rose-100">
                   C<sub>21</sub>H<sub>20</sub>O<sub>6</sub>
                 </span>
               </div>
-              <p className="text-[9.5px] text-stone-550 font-mono tracking-tight mt-0.5 uppercase font-semibold flex items-center gap-1.5">
-                Síntese Harmônica de Curcumina, Ocitocina & Doses Diárias de Chamego
-                <Beaker size={11} className="text-rose-500 animate-pulse" />
+              <p className="text-[8.5px] sm:text-[9.5px] text-stone-550 font-mono tracking-tight mt-0.5 uppercase font-semibold flex items-center gap-1">
+                <span>Síntese Harmônica de Curcumina, Ocitocina & Doses Diárias de Chamego</span>
+                <Beaker size={11} className="text-rose-500 animate-pulse shrink-0" />
               </p>
             </div>
           </div>
 
           {/* Action triggers: Quick Scroll & Profile selector */}
-          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full sm:w-auto justify-start sm:justify-end">
             <button
               onClick={() => {
                 const el = document.getElementById('composto-desconhecido');
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 bg-emerald-600 text-white shadow-2xs hover:bg-emerald-700"
+              className="px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 bg-emerald-600 text-white shadow-2xs hover:bg-emerald-700 cursor-pointer"
             >
               <FlaskConical size={14} />
-              <span>Composto Desconhecido</span>
+              <span className="inline">Amostra #014</span>
             </button>
 
             <ProfileSelector
