@@ -14,6 +14,7 @@ import {
   Database,
   Calendar,
   Atom,
+  FlaskConical,
 } from 'lucide-react';
 import { CalendarEvent } from './types';
 import { dataService } from './services/dataService';
@@ -26,6 +27,7 @@ import { CurcuminMolecule } from './components/CurcuminMolecule';
 import { MemoryAlbum } from './components/MemoryAlbum';
 import { ChemistryBackdrop } from './components/ChemistryBackdrop';
 import { CriandoReacoes } from './components/CriandoReacoes';
+import { CompostoDesconhecido } from './components/CompostoDesconhecido';
 import { DateChecklist } from './components/DateChecklist';
 import { CapsulaDoTempo } from './components/CapsulaDoTempo';
 
@@ -46,6 +48,48 @@ export default function App() {
   // Calendar View Month/Year
   const [viewedYear, setViewedYear] = useState<number>(INITIAL_YEAR);
   const [viewedMonth, setViewedMonth] = useState<number>(INITIAL_MONTH);
+
+  // Dedicated Route Navigation ('home' vs 'composto-desconhecido')
+  const [currentRoute, setCurrentRoute] = useState<'home' | 'composto-desconhecido'>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      if (path.includes('composto-desconhecido') || hash.includes('composto-desconhecido')) {
+        return 'composto-desconhecido';
+      }
+    }
+    return 'home';
+  });
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      if (path.includes('composto-desconhecido') || hash.includes('composto-desconhecido')) {
+        setCurrentRoute('composto-desconhecido');
+      } else {
+        setCurrentRoute('home');
+      }
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
+
+  const navigateTo = (route: 'home' | 'composto-desconhecido') => {
+    setCurrentRoute(route);
+    if (typeof window !== 'undefined') {
+      if (route === 'composto-desconhecido') {
+        window.history.pushState({}, '', '/composto-desconhecido');
+      } else {
+        window.history.pushState({}, '', '/');
+      }
+    }
+  };
 
   // About panel toggle
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -178,8 +222,19 @@ export default function App() {
             </div>
           </div>
 
-          {/* Action triggers: Profile selection code (Removed Monografia button) */}
-          <div className="flex items-center gap-2.5">
+          {/* Action triggers: Quick Scroll & Profile selector */}
+          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+            <button
+              onClick={() => {
+                const el = document.getElementById('composto-desconhecido');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 bg-emerald-600 text-white shadow-2xs hover:bg-emerald-700"
+            >
+              <FlaskConical size={14} />
+              <span>Composto Desconhecido</span>
+            </button>
+
             <ProfileSelector
               currentProfile={currentProfile}
               onProfileChange={handleProfileChange}
@@ -188,7 +243,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* Primary Dashboard Area */}
+      {/* Primary Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 md:px-8 z-10 flex flex-col gap-6">
         
         {/* Core dynamic metrics dashboard values */}
@@ -199,6 +254,9 @@ export default function App() {
           viewedMonth={viewedMonth}
           viewedMonthName={monthNamesBr[viewedMonth]}
         />
+
+        {/* Composto Desconhecido - Investigação Laboratorial (Destaque no topo da página) */}
+        <CompostoDesconhecido currentProfile={currentProfile} />
 
         {/* Calendar Workspace Grid */}
         <div id="main-deck-grid" className="w-full">

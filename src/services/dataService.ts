@@ -17,7 +17,137 @@ import {
   increment,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured, handleFirestoreError, OperationType } from '../firebase';
-import { CalendarEvent, PostIt, PlaylistItem, DateSuggestion, SecretLetter } from '../types';
+import { CalendarEvent, PostIt, PlaylistItem, DateSuggestion, SecretLetter, CompoundEssay, CompoundHypothesis } from '../types';
+
+export const DEFAULT_COMPOUND_ESSAYS: CompoundEssay[] = [
+  {
+    id: 'ensaio-01',
+    essayNumber: 1,
+    title: 'ENSAIO 01',
+    unlockDate: '2026-07-24',
+    unlockTime: '18:00',
+    enigma: 'Toda substância tem sua incompatibilidade. A amostra em análise reage mal a um fruto redondo, roxo ou verde, nunca detectado em nenhuma coleta. Qual é o composto sistematicamente rejeitado?',
+    sampleReleased: 'O conteúdo da caixa não é líquido nem gasoso. Estado sólido, com brilho característico de metal.',
+  },
+  {
+    id: 'ensaio-02',
+    essayNumber: 2,
+    title: 'ENSAIO 02',
+    unlockDate: '2026-07-26',
+    unlockTime: '18:00',
+    enigma: 'Há uma zona de exclusão na amostra, não catalogada em manual algum, onde nenhum reagente externo pode tocar sem gerar reação adversa imediata. Fica no centro geométrico do tronco. Qual é a região?',
+    sampleReleased: 'Esse metal reflete tons prateados, e carrega algo gravado que não foi impresso por máquina. Foi desenhado à mão.',
+  },
+  {
+    id: 'ensaio-03',
+    essayNumber: 3,
+    title: 'ENSAIO 03',
+    unlockDate: '2026-07-27',
+    unlockTime: '18:00',
+    enigma: 'Padrão de comportamento repetitivo. Independente do estímulo, a amostra converge sempre pra mesma piada, envolvendo uma ave aquática amarela de borracha. Frequência alta. Qual é o padrão?',
+    sampleReleased: 'O desenho gravado tem pétalas. Uma flor rabiscada num pedaço comum de papel, que ganhou forma permanente em metal.',
+  },
+  {
+    id: 'ensaio-04',
+    essayNumber: 4,
+    title: 'ENSAIO 04',
+    unlockDate: '2026-07-29',
+    unlockTime: '18:00',
+    enigma: 'Autoavaliação registrada sobre performance em ambiente de cozinha. Excelência absoluta, sem margem de erro, segundo relato da própria amostra e ainda não corroborado por avaliação externa. Qual é a habilidade autodeclarada?',
+    sampleReleased: 'Existe uma segunda peça idêntica em conceito, com uma flor diferente gravada. Formam um par.',
+  },
+  {
+    id: 'ensaio-05',
+    essayNumber: 5,
+    title: 'ENSAIO 05',
+    unlockDate: '2026-07-30',
+    unlockTime: '18:00',
+    enigma: 'Comportamento de assepsia. Ao menor sinal de contaminação em qualquer superfície, a amostra arremessa instantaneamente o instrumento de limpeza mais próximo. Qual é o instrumento?',
+    sampleReleased: 'O par não é feito pra ficar guardado numa gaveta. É feito pra ser usado sobre o corpo.',
+  },
+  {
+    id: 'ensaio-06',
+    essayNumber: 6,
+    title: 'ENSAIO 06',
+    unlockDate: '2026-08-01',
+    unlockTime: '18:00',
+    enigma: 'Registro de consumo de conteúdo seriado. Produção fictícia nacional, estruturada em formato antológico, cada episódio narra um vínculo afetivo diferente, sem continuidade de elenco fixo entre eles. Exibida originalmente por emissora de TV aberta. Qual é o título da série, batizado com dois tipos opostos de contato físico?',
+    sampleReleased: 'As peças serão entregues dentro de uma caixa, que guarda mais coisas além delas.',
+  },
+  {
+    id: 'ensaio-07',
+    essayNumber: 7,
+    title: 'ENSAIO 07',
+    unlockDate: '2026-08-02',
+    unlockTime: '18:00',
+    enigma: 'Alto engajamento registrado com conteúdo audiovisual de julgamento estético de corpos em bikini, com apresentadora crítica e categórica. Qual é o programa?',
+    sampleReleased: 'Dentro da caixa também há pequenos objetos esmaltados, do tamanho de uma moeda, feitos pra prender em roupa ou mochila.',
+  },
+  {
+    id: 'ensaio-08',
+    essayNumber: 8,
+    title: 'ENSAIO 08',
+    unlockDate: '2026-08-04',
+    unlockTime: '18:00',
+    enigma: 'Substância de consumo diário sem a qual o metabolismo entra em estado de alerta. Sem etanol. Com cafeína em concentração significativa. Qual é?',
+    sampleReleased: 'Esses objetos esmaltados têm tema de laboratório. Química, mesmo.',
+  },
+  {
+    id: 'ensaio-09',
+    essayNumber: 9,
+    title: 'ENSAIO 09',
+    unlockDate: '2026-08-05',
+    unlockTime: '18:00',
+    enigma: 'Traço recorrente. Rigor extremo na análise dos próprios resultados, padrão de exigência mais alto sobre si mesma do que sobre qualquer outro sujeito. Qual é o traço?',
+    sampleReleased: 'Há uma peça na caixa que não é metal nem esmalte. É cerâmica, com uma função bem específica na cozinha.',
+  },
+  {
+    id: 'ensaio-10',
+    essayNumber: 10,
+    title: 'ENSAIO 10',
+    unlockDate: '2026-08-07',
+    unlockTime: '18:00',
+    enigma: 'Observação em ambiente de grupo. Mesmo sem cargo formal, a amostra tende a assumir naturalmente a coordenação de qualquer atividade coletiva. Qual é o traço?',
+    sampleReleased: 'Essa peça de cerâmica tem um formato mais orgânico que geométrico, com uma abertura irregular no topo e acabamento fosco.',
+  },
+  {
+    id: 'ensaio-11',
+    essayNumber: 11,
+    title: 'ENSAIO 11',
+    unlockDate: '2026-08-08',
+    unlockTime: '18:00',
+    enigma: 'Ambiente de alta preferência pra coleta de amostras variadas, frutas, temperos, produtos artesanais, geralmente aos fins de semana, ao ar livre. Qual é o ambiente?',
+    sampleReleased: 'Essa peça guarda, no próprio corpo, um mineral branco e cristalino, essencial em pequena quantidade pra qualquer receita. Não tem nada a ver com o bicho favorito da amostra, aquele que incha o corpo todo quando se sente ameaçado, mas o carinho por ele foi lembrado na hora de escolher o presente.',
+  },
+  {
+    id: 'ensaio-12',
+    essayNumber: 12,
+    title: 'ENSAIO 12',
+    unlockDate: '2026-08-10',
+    unlockTime: '18:00',
+    enigma: 'Atividade física de defesa pessoal praticada com regularidade, sistema israelense que combina golpes de várias artes marciais, com foco em neutralização rápida. Qual é a atividade?',
+    sampleReleased: 'Todas as peças catalogadas até aqui estão dentro de uma caixa amarrada com fita dourada. A investigação está perto do fim.',
+  },
+  {
+    id: 'ensaio-13',
+    essayNumber: 13,
+    title: 'ENSAIO 13',
+    unlockDate: '',
+    unlockTime: '18:00',
+    enigma: 'Levantamento físico da amostra. Nenhum anel metálico é detectado ao redor de nenhum dos dedos, em nenhuma condição. Ausência constante, não circunstancial. Qual é o item de joalheria estruturalmente ausente?',
+    sampleReleased: 'A coleta final está marcada. Prepare-se, a próxima mensagem já não é mais um enigma.',
+  },
+  {
+    id: 'ensaio-14',
+    essayNumber: 14,
+    title: 'ENSAIO 14',
+    unlockDate: '',
+    unlockTime: '18:00',
+    enigma: '',
+    sampleReleased: 'A última amostra desta série só pode ser coletada pessoalmente. [DIA], às [HORA], em [LOCAL]. Traga curiosidade. O resto a gente resolve lá.',
+  },
+];
+
 
 // Mock DB for LocalStorage fallback
 const EVENTS_KEY = 'curcumina_events';
@@ -222,6 +352,8 @@ const listenersMap: Record<string, Set<any>> = {
   suggestions: new Set(),
   letters: new Set(),
   pulseStats: new Set(),
+  compoundEssays: new Set(),
+  compoundHypotheses: new Set(),
 };
 
 if (typeof window !== 'undefined') {
@@ -1091,4 +1223,207 @@ export const dataService = {
       }
     }
   },
+
+  subscribeCompoundEssays(callback: (essays: CompoundEssay[]) => void): () => void {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'compound_essays'), orderBy('essayNumber', 'asc'));
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          if (snapshot.empty) {
+            DEFAULT_COMPOUND_ESSAYS.forEach(async (essay) => {
+              await setDoc(doc(db, 'compound_essays', essay.id), essay);
+            });
+            callback(DEFAULT_COMPOUND_ESSAYS);
+          } else {
+            const list: CompoundEssay[] = [];
+            snapshot.forEach((docSnap) => {
+              const data = docSnap.data() as CompoundEssay;
+              const defaultEssay = DEFAULT_COMPOUND_ESSAYS.find(
+                (d) => d.id === docSnap.id || d.essayNumber === data.essayNumber
+              );
+
+              // Use canonical enigma and sampleReleased from DEFAULT_COMPOUND_ESSAYS
+              // removing em-dashes or robotic markers, while keeping unlockDate and unlockTime
+              const rawEnigma = defaultEssay ? defaultEssay.enigma : (data.enigma || '');
+              const rawSample = defaultEssay ? defaultEssay.sampleReleased : (data.sampleReleased || '');
+
+              const enigma = rawEnigma.replace(/—|–/g, '. ').replace(/\s+/g, ' ').trim();
+              const sampleReleased = rawSample.replace(/—|–/g, '. ').replace(/\s+/g, ' ').trim();
+
+              const unlockTime = '18:00';
+
+              // If stored enigma, sampleReleased or unlockTime differs from canonical, update Firestore
+              if (data.enigma !== enigma || data.sampleReleased !== sampleReleased || data.unlockTime !== unlockTime) {
+                setDoc(
+                  doc(db, 'compound_essays', docSnap.id),
+                  { enigma, sampleReleased, unlockTime },
+                  { merge: true }
+                ).catch((err) => console.error('Error syncing essay text cleanups:', err));
+              }
+
+              list.push({
+                ...data,
+                id: docSnap.id,
+                enigma,
+                sampleReleased,
+                unlockTime,
+              });
+            });
+
+            // Ensure all 14 default essays exist in list
+            DEFAULT_COMPOUND_ESSAYS.forEach((defaultEssay) => {
+              if (!list.some((item) => item.essayNumber === defaultEssay.essayNumber)) {
+                list.push(defaultEssay);
+                setDoc(doc(db, 'compound_essays', defaultEssay.id), defaultEssay).catch(() => {});
+              }
+            });
+
+            list.sort((a, b) => a.essayNumber - b.essayNumber);
+            callback(list);
+          }
+        },
+        (error) => {
+          console.error('Error listening to compound essays:', error);
+          callback(DEFAULT_COMPOUND_ESSAYS);
+        }
+      );
+      return unsubscribe;
+    } else {
+      listenersMap.compoundEssays.add(callback);
+      const stored = localStorage.getItem('curcumina_compound_essays');
+      let parsed: CompoundEssay[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+
+      const mergedList = DEFAULT_COMPOUND_ESSAYS.map((defaultEssay) => {
+        const storedMatch = parsed.find(
+          (p) => p.id === defaultEssay.id || p.essayNumber === defaultEssay.essayNumber
+        );
+        return {
+          ...defaultEssay,
+          unlockDate: storedMatch?.unlockDate !== undefined ? storedMatch.unlockDate : defaultEssay.unlockDate,
+          unlockTime: '18:00',
+        };
+      });
+
+      localStorage.setItem('curcumina_compound_essays', JSON.stringify(mergedList));
+      callback(mergedList);
+      return () => {
+        listenersMap.compoundEssays.delete(callback);
+      };
+    }
+  },
+
+  async updateCompoundEssaySchedule(id: string, unlockDate: string, unlockTime: string): Promise<void> {
+    if (isFirebaseConfigured && db) {
+      const ref = doc(db, 'compound_essays', id);
+      await updateDoc(ref, { unlockDate, unlockTime });
+    } else {
+      const stored = localStorage.getItem('curcumina_compound_essays');
+      let parsed: CompoundEssay[] = stored ? JSON.parse(stored) : [...DEFAULT_COMPOUND_ESSAYS];
+      const idx = parsed.findIndex((e) => e.id === id);
+      if (idx !== -1) {
+        parsed[idx] = { ...parsed[idx], unlockDate, unlockTime };
+      } else {
+        const defaultMatch = DEFAULT_COMPOUND_ESSAYS.find((e) => e.id === id);
+        if (defaultMatch) {
+          parsed.push({ ...defaultMatch, unlockDate, unlockTime });
+        }
+      }
+      localStorage.setItem('curcumina_compound_essays', JSON.stringify(parsed));
+      if (listenersMap.compoundEssays) {
+        listenersMap.compoundEssays.forEach((cb) => {
+          try { cb(parsed); } catch (_) {}
+        });
+      }
+    }
+  },
+
+  subscribeCompoundHypotheses(callback: (hypotheses: CompoundHypothesis[]) => void): () => void {
+    if (isFirebaseConfigured && db) {
+      const q = query(collection(db, 'compound_hypotheses'), orderBy('submittedAt', 'asc'));
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const list: CompoundHypothesis[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({
+              id: docSnap.id,
+              ...(docSnap.data() as Omit<CompoundHypothesis, 'id'>),
+            });
+          });
+          callback(list);
+        },
+        (error) => {
+          console.error('Error listening to compound hypotheses:', error);
+          callback([]);
+        }
+      );
+      return unsubscribe;
+    } else {
+      listenersMap.compoundHypotheses.add(callback);
+      const stored = localStorage.getItem('curcumina_compound_hypotheses');
+      let parsed: CompoundHypothesis[] = [];
+      if (stored) {
+        try { parsed = JSON.parse(stored); } catch (_) {}
+      }
+      callback(parsed);
+      return () => {
+        listenersMap.compoundHypotheses.delete(callback);
+      };
+    }
+  },
+
+  async saveCompoundHypothesis(essayNumber: number, hypothesis: string, author: string): Promise<void> {
+    const payload = {
+      essayNumber,
+      hypothesis,
+      author,
+      submittedAt: new Date().toISOString(),
+    };
+    if (isFirebaseConfigured && db) {
+      const docId = `hyp-ensaio-${essayNumber}-${author}`;
+      await setDoc(doc(db, 'compound_hypotheses', docId), payload);
+    } else {
+      const stored = localStorage.getItem('curcumina_compound_hypotheses');
+      let parsed: CompoundHypothesis[] = stored ? JSON.parse(stored) : [];
+      const docId = `hyp-ensaio-${essayNumber}-${author}`;
+      const idx = parsed.findIndex((h) => h.id === docId || (h.essayNumber === essayNumber && h.author === author));
+      if (idx !== -1) {
+        parsed[idx] = { id: docId, ...payload };
+      } else {
+        parsed.push({ id: docId, ...payload });
+      }
+      localStorage.setItem('curcumina_compound_hypotheses', JSON.stringify(parsed));
+      if (listenersMap.compoundHypotheses) {
+        listenersMap.compoundHypotheses.forEach((cb) => {
+          try { cb(parsed); } catch (_) {}
+        });
+      }
+    }
+  },
+
+  async clearCompoundHypotheses(): Promise<void> {
+    if (isFirebaseConfigured && db) {
+      try {
+        const snapshot = await getDocs(collection(db, 'compound_hypotheses'));
+        const batchDeletes = snapshot.docs.map((docSnap) => deleteDoc(doc(db, 'compound_hypotheses', docSnap.id)));
+        await Promise.all(batchDeletes);
+      } catch (err) {
+        console.error('Error clearing compound hypotheses from Firestore:', err);
+      }
+    }
+    localStorage.removeItem('curcumina_compound_hypotheses');
+    if (listenersMap.compoundHypotheses) {
+      listenersMap.compoundHypotheses.forEach((cb) => {
+        try { cb([]); } catch (_) {}
+      });
+    }
+  },
 };
+
+// Immediate cleanup of previous test responses for clean release
+dataService.clearCompoundHypotheses().catch(() => {});
+

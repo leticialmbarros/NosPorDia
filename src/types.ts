@@ -142,3 +142,21 @@ export interface SecretLetter {
   createdPulseCount?: number; // Number of pulses at creation time
 }
 
+export interface CompoundEssay {
+  id: string; // 'ensaio-01', etc.
+  essayNumber: number; // 1 to 14
+  title: string; // 'ENSAIO 01'
+  unlockDate: string; // 'YYYY-MM-DD'
+  unlockTime: string; // 'HH:mm'
+  enigma: string;
+  sampleReleased: string;
+}
+
+export interface CompoundHypothesis {
+  id: string;
+  essayNumber: number;
+  hypothesis: string;
+  author: string; // 'Letícia' or 'Érica'
+  submittedAt: string;
+}
+

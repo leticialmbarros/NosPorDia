@@ -185,5 +185,17 @@ service cloud.firestore {
         && incoming().createdAt == existing().createdAt;
       allow delete: if isValidId(letterId);
     }
+
+    // Composto Desconhecido - Ensaios Laboratoriais
+    match /compound_essays/{essayId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Composto Desconhecido - Hipóteses Registradas
+    match /compound_hypotheses/{hypothesisId} {
+      allow read: if true;
+      allow write: if true;
+    }
   }
 }
