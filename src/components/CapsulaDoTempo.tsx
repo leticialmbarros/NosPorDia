@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Mail, 
@@ -17,10 +17,98 @@ import {
   Trash2, 
   CheckCircle2, 
   Clock,
-  Eye
+  Eye,
+  Bold,
+  Italic,
+  Underline,
+  Heading,
+  Quote,
+  Edit3
 } from 'lucide-react';
 import { dataService } from '../services/dataService';
 import { SecretLetter } from '../types';
+
+// Inline Formatted Letter Parser Component
+export const FormattedLetterContent: React.FC<{ content: string; className?: string }> = ({ content, className = '' }) => {
+  if (!content) return null;
+
+  const renderInlineFormatted = (text: string): React.ReactNode[] => {
+    let normalized = text
+      .replace(/<u>(.*?)<\/u>/gi, '[u]$1[/u]')
+      .replace(/<small>(.*?)<\/small>/gi, '[small]$1[/small]')
+      .replace(/<big>(.*?)<\/big>/gi, '[big]$1[/big]')
+      .replace(/<pink>(.*?)<\/pink>/gi, '[pink]$1[/pink]');
+
+    const pattern = /(\*\*.*?\*\*|\*.*?\*|\[u\].*?\[\/u\]|\[small\].*?\[\/small\]|\[big\].*?\[\/big\]|\[pink\].*?\[\/pink\])/g;
+    const parts = normalized.split(pattern);
+
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+        return <strong key={i} className="font-extrabold text-stone-900">{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
+        return <em key={i} className="italic text-rose-900 font-medium">{part.slice(1, -1)}</em>;
+      }
+      if (part.startsWith('[u]') && part.endsWith('[/u]')) {
+        return <u key={i} className="underline decoration-rose-400 decoration-2 underline-offset-2">{part.slice(3, -4)}</u>;
+      }
+      if (part.startsWith('[small]') && part.endsWith('[/small]')) {
+        return <span key={i} className="text-xs opacity-90 font-sans">{part.slice(7, -8)}</span>;
+      }
+      if (part.startsWith('[big]') && part.endsWith('[/big]')) {
+        return <span key={i} className="text-lg md:text-xl font-bold text-stone-900">{part.slice(5, -6)}</span>;
+      }
+      if (part.startsWith('[pink]') && part.endsWith('[/pink]')) {
+        return <span key={i} className="bg-rose-100/90 text-rose-700 px-1.5 py-0.5 rounded-md font-semibold border border-rose-200/50">{part.slice(6, -7)}</span>;
+      }
+
+      return part;
+    });
+  };
+
+  const lines = content.split('\n');
+
+  return (
+    <div className={`space-y-2.5 font-serif leading-relaxed text-stone-800 ${className}`}>
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <div key={index} className="h-2" />;
+        }
+
+        if (line.startsWith('# ')) {
+          return (
+            <h3 key={index} className="text-xl md:text-2xl font-black text-rose-950 tracking-tight my-2">
+              {renderInlineFormatted(line.slice(2))}
+            </h3>
+          );
+        }
+
+        if (line.startsWith('## ')) {
+          return (
+            <h4 key={index} className="text-lg font-bold text-stone-900 my-1.5">
+              {renderInlineFormatted(line.slice(3))}
+            </h4>
+          );
+        }
+
+        if (line.startsWith('> ')) {
+          return (
+            <blockquote key={index} className="border-l-3 border-rose-400 pl-3.5 my-2.5 italic text-stone-700 bg-rose-50/70 py-1.5 rounded-r-xl shadow-3xs">
+              {renderInlineFormatted(line.slice(2))}
+            </blockquote>
+          );
+        }
+
+        return (
+          <p key={index} className="whitespace-pre-wrap">
+            {renderInlineFormatted(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+};
 
 interface CapsulaDoTempoProps {
   currentProfile: string;
@@ -34,12 +122,16 @@ export const CapsulaDoTempo: React.FC<CapsulaDoTempoProps> = ({ currentProfile }
   // Form states
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [editorTab, setEditorTab] = useState<'edit' | 'preview'>('edit');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const [unlockType, setUnlockType] = useState<'date' | 'pulses'>('date');
   const [unlockDate, setUnlockDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
   });
+  const [unlockTime, setUnlockTime] = useState('00:00');
   const [unlockPulses, setUnlockPulses] = useState(10);
 
   // Read Modal state
@@ -62,12 +154,37 @@ export const CapsulaDoTempo: React.FC<CapsulaDoTempoProps> = ({ currentProfile }
     };
   }, []);
 
+  const applyFormat = (prefix: string, suffix: string = '', defaultText: string = 'texto') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+    
+    const textToFormat = selectedText || defaultText;
+    const replacement = `${prefix}${textToFormat}${suffix}`;
+
+    const newContent = content.substring(0, start) + replacement + content.substring(end);
+    setContent(newContent);
+
+    setTimeout(() => {
+      textarea.focus();
+      if (selectedText) {
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
+      } else {
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length + defaultText.length);
+      }
+    }, 0);
+  };
+
   const handleCreateLetter = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
     const recipient = currentProfile === 'Érica' ? 'Letícia' : 'Érica';
-    const unlockValue = unlockType === 'date' ? unlockDate : String(unlockPulses);
+    const formattedDateTime = unlockTime ? `${unlockDate}T${unlockTime}` : `${unlockDate}T00:00`;
+    const unlockValue = unlockType === 'date' ? formattedDateTime : String(unlockPulses);
 
     try {
       await dataService.addLetter(
@@ -84,6 +201,7 @@ export const CapsulaDoTempo: React.FC<CapsulaDoTempoProps> = ({ currentProfile }
       setTitle('');
       setContent('');
       setUnlockType('date');
+      setUnlockTime('00:00');
       setIsAdding(false);
     } catch (err) {
       console.error('Erro ao adicionar carta:', err);
@@ -119,8 +237,13 @@ export const CapsulaDoTempo: React.FC<CapsulaDoTempoProps> = ({ currentProfile }
   // Helper to determine if a letter is unlocked
   const isUnlocked = (letter: SecretLetter): boolean => {
     if (letter.unlockType === 'date') {
-      const todayStr = new Date().toISOString().split('T')[0];
-      return todayStr >= letter.unlockValue;
+      if (letter.unlockValue.includes('T')) {
+        const unlockDateTime = new Date(letter.unlockValue);
+        return new Date() >= unlockDateTime;
+      } else {
+        const todayStr = new Date().toISOString().split('T')[0];
+        return todayStr >= letter.unlockValue;
+      }
     } else {
       const targetCount = (letter.createdPulseCount || 0) + Number(letter.unlockValue);
       return pulseCount >= targetCount;
@@ -130,12 +253,22 @@ export const CapsulaDoTempo: React.FC<CapsulaDoTempoProps> = ({ currentProfile }
   // Get unlock description text
   const getUnlockDetails = (letter: SecretLetter) => {
     if (letter.unlockType === 'date') {
-      const dateBr = letter.unlockValue.split('-').reverse().join('/');
-      return {
-        label: `Apenas em ${dateBr}`,
-        icon: <Calendar size={12} />,
-        unlocked: isUnlocked(letter)
-      };
+      if (letter.unlockValue.includes('T')) {
+        const [d, t] = letter.unlockValue.split('T');
+        const dateBr = d.split('-').reverse().join('/');
+        return {
+          label: `Apenas em ${dateBr} às ${t}`,
+          icon: <Calendar size={12} />,
+          unlocked: isUnlocked(letter)
+        };
+      } else {
+        const dateBr = letter.unlockValue.split('-').reverse().join('/');
+        return {
+          label: `Apenas em ${dateBr}`,
+          icon: <Calendar size={12} />,
+          unlocked: isUnlocked(letter)
+        };
+      }
     } else {
       const targetCount = (letter.createdPulseCount || 0) + Number(letter.unlockValue);
       const remaining = Math.max(0, targetCount - pulseCount);
@@ -167,7 +300,7 @@ export const CapsulaDoTempo: React.FC<CapsulaDoTempoProps> = ({ currentProfile }
             Baú de Cartas Secretas
           </h2>
           <p className="text-[10.5px] text-stone-500 font-mono leading-relaxed max-w-xl">
-            Escreva cartinhas de amor confidenciais para a Letícia ou Érica, seladas no tempo. Defina datas de aniversário ou metas de chamego (pulsos de Ocitocina) para revelar os segredos!
+            Quer me contar alguma coisa? Defina datas de aniversário ou metas de chamego (pulsos de Ocitocina) para revelar os segredos!
           </p>
         </div>
 
@@ -226,18 +359,141 @@ export const CapsulaDoTempo: React.FC<CapsulaDoTempoProps> = ({ currentProfile }
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold font-mono uppercase text-slate-500 block">
-                  O conteúdo íntimo da sua carta *
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder="Escreva seus sentimentos com carinho..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full text-xs px-4 py-3 border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-rose-400 font-medium leading-relaxed resize-y"
-                />
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[9px] font-bold font-mono uppercase text-slate-500 block">
+                    O conteúdo íntimo da sua carta *
+                  </label>
+
+                  {/* Mode tabs: Edit vs Live Preview */}
+                  <div className="flex bg-stone-200/60 p-0.5 rounded-lg text-[9px] font-mono font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setEditorTab('edit')}
+                      className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                        editorTab === 'edit'
+                          ? 'bg-white text-stone-900 shadow-2xs'
+                          : 'text-stone-500 hover:text-stone-800'
+                      }`}
+                    >
+                      <Edit3 size={11} /> Digitar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditorTab('preview')}
+                      className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                        editorTab === 'preview'
+                          ? 'bg-white text-rose-600 shadow-2xs'
+                          : 'text-stone-500 hover:text-stone-800'
+                      }`}
+                    >
+                      <Eye size={11} /> Prévia
+                    </button>
+                  </div>
+                </div>
+
+                {editorTab === 'edit' ? (
+                  <div className="border border-slate-200 bg-white rounded-xl overflow-hidden focus-within:border-rose-400 transition-colors">
+                    {/* Toolbar */}
+                    <div className="bg-stone-50/90 border-b border-stone-200/70 p-1.5 flex flex-wrap items-center gap-1 text-[10px] font-mono font-bold text-stone-600">
+                      <button
+                        type="button"
+                        onClick={() => applyFormat('**', '**', 'negrito')}
+                        className="p-1.5 hover:bg-white hover:text-rose-600 rounded-lg border border-transparent hover:border-stone-200 transition-all cursor-pointer"
+                        title="Negrito (**texto**)"
+                      >
+                        <Bold size={13} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => applyFormat('*', '*', 'itálico')}
+                        className="p-1.5 hover:bg-white hover:text-rose-600 rounded-lg border border-transparent hover:border-stone-200 transition-all cursor-pointer"
+                        title="Itálico (*texto*)"
+                      >
+                        <Italic size={13} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => applyFormat('<u>', '</u>', 'sublinhado')}
+                        className="p-1.5 hover:bg-white hover:text-rose-600 rounded-lg border border-transparent hover:border-stone-200 transition-all cursor-pointer"
+                        title="Sublinhado (<u>texto</u>)"
+                      >
+                        <Underline size={13} />
+                      </button>
+
+                      <div className="h-4 w-px bg-stone-300 mx-0.5" />
+
+                      <button
+                        type="button"
+                        onClick={() => applyFormat('# ', '', 'Título Principal')}
+                        className="px-2 py-1 hover:bg-white hover:text-rose-600 rounded-lg border border-transparent hover:border-stone-200 transition-all cursor-pointer flex items-center gap-1 text-[10px]"
+                        title="Título Grande (# texto)"
+                      >
+                        <Heading size={13} /> Título
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => applyFormat('<big>', '</big>', 'texto maior')}
+                        className="px-2 py-1 hover:bg-white hover:text-rose-600 rounded-lg border border-transparent hover:border-stone-200 transition-all cursor-pointer text-[10px] font-black"
+                        title="Fonte Maior (<big>texto</big>)"
+                      >
+                        A+
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => applyFormat('<small>', '</small>', 'texto menor')}
+                        className="px-2 py-1 hover:bg-white hover:text-rose-600 rounded-lg border border-transparent hover:border-stone-200 transition-all cursor-pointer text-[9px]"
+                        title="Fonte Menor (<small>texto</small>)"
+                      >
+                        A-
+                      </button>
+
+                      <div className="h-4 w-px bg-stone-300 mx-0.5" />
+
+                      <button
+                        type="button"
+                        onClick={() => applyFormat('<pink>', '</pink>', 'destaque rosa')}
+                        className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg border border-rose-200 transition-all cursor-pointer flex items-center gap-1 text-[10px]"
+                        title="Destaque Rosa (<pink>texto</pink>)"
+                      >
+                        <Sparkles size={11} className="text-rose-500" /> Destaque
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => applyFormat('> ', '', 'citação de amor...')}
+                        className="p-1.5 hover:bg-white hover:text-rose-600 rounded-lg border border-transparent hover:border-stone-200 transition-all cursor-pointer"
+                        title="Citação (> texto)"
+                      >
+                        <Quote size={13} />
+                      </button>
+                    </div>
+
+                    <textarea
+                      ref={textareaRef}
+                      required
+                      rows={6}
+                      placeholder="Escreva seus sentimentos com carinho... Use a barra acima para formatar em negrito, itálico, sublinhado, tamanhos de fonte e destaques!"
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      className="w-full text-xs p-3.5 focus:outline-none font-medium leading-relaxed resize-y min-h-[140px]"
+                    />
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 bg-white rounded-xl p-4 min-h-[160px] max-h-[250px] overflow-y-auto">
+                    {content.trim() ? (
+                      <FormattedLetterContent content={content} />
+                    ) : (
+                      <p className="text-xs text-stone-400 font-mono italic">
+                        Nenhum texto digitado ainda... Alterne para a aba "Digitar" para escrever sua cartinha!
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Unlock Condition configuration */}
@@ -274,18 +530,39 @@ export const CapsulaDoTempo: React.FC<CapsulaDoTempoProps> = ({ currentProfile }
                 </div>
 
                 {unlockType === 'date' ? (
-                  <div className="space-y-1 bg-white border border-stone-200/50 p-4 rounded-xl max-w-sm">
+                  <div className="space-y-2.5 bg-white border border-stone-200/50 p-4 rounded-xl max-w-md">
                     <label className="text-[8.5px] font-bold font-mono text-stone-500 block uppercase">
-                      Escolha a Data Futura de Abertura:
+                      Data e Horário de Liberação:
                     </label>
-                    <input
-                      type="date"
-                      required
-                      min={new Date().toISOString().split('T')[0]}
-                      value={unlockDate}
-                      onChange={(e) => setUnlockDate(e.target.value)}
-                      className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:border-rose-400"
-                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <span className="text-[8px] font-mono text-stone-400 block mb-1">Dia:</span>
+                        <input
+                          type="date"
+                          required
+                          min={new Date().toISOString().split('T')[0]}
+                          value={unlockDate}
+                          onChange={(e) => setUnlockDate(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:border-rose-400"
+                        />
+                      </div>
+
+                      <div>
+                        <span className="text-[8px] font-mono text-stone-400 block mb-1">Horário:</span>
+                        <input
+                          type="time"
+                          required
+                          value={unlockTime}
+                          onChange={(e) => setUnlockTime(e.target.value)}
+                          className="w-full px-3 py-1.5 border border-stone-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:border-rose-400"
+                        />
+                      </div>
+                    </div>
+
+                    <span className="text-[8.5px] font-mono font-medium text-stone-500 block pt-0.5">
+                      🔒 A carta ficará selada até <strong className="text-rose-600 font-bold">{unlockDate.split('-').reverse().join('/')} às {unlockTime}</strong>.
+                    </span>
                   </div>
                 ) : (
                   <div className="space-y-2 bg-white border border-stone-200/50 p-4 rounded-xl max-w-sm">
@@ -439,33 +716,33 @@ export const CapsulaDoTempo: React.FC<CapsulaDoTempoProps> = ({ currentProfile }
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: -20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#FFFDF9] border-2 border-amber-200 rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[350px]"
+              className="bg-[#FFFDF9] border-2 border-amber-200 rounded-3xl p-6 md:p-8 max-w-2xl w-full max-h-[88vh] shadow-2xl relative flex flex-col justify-between overflow-hidden"
             >
               {/* Visual red hearts watermarks */}
               <div className="absolute right-[-20px] bottom-[-20px] text-rose-500 opacity-[0.03] pointer-events-none select-none">
                 <Heart size={200} className="fill-current animate-pulse" />
               </div>
 
-              <div>
-                {/* Letter Header */}
-                <div className="flex items-center justify-between border-b border-stone-200/60 pb-3 mb-4 text-[10px] font-mono font-extrabold text-stone-500 uppercase">
+              {/* Fixed Header */}
+              <div className="shrink-0 mb-2">
+                <div className="flex items-center justify-between border-b border-stone-200/60 pb-3 mb-3 text-[10px] font-mono font-extrabold text-stone-500 uppercase">
                   <span>De: <strong className="text-rose-600">{readingLetter.sender}</strong></span>
                   <span>Para: <strong className="text-rose-600">{readingLetter.recipient}</strong></span>
                 </div>
 
                 {/* Title */}
-                <h3 className="text-lg md:text-xl font-serif font-black text-stone-900 mb-3 tracking-tight">
+                <h3 className="text-lg md:text-xl font-serif font-black text-stone-900 tracking-tight">
                   {readingLetter.title}
                 </h3>
-
-                {/* Hand-written styled content */}
-                <div className="text-sm md:text-base text-stone-800 leading-relaxed font-serif italic py-2 whitespace-pre-wrap pl-3 border-l-2 border-rose-300">
-                  {readingLetter.content}
-                </div>
               </div>
 
-              {/* Signatures & Footer info */}
-              <div className="mt-8 border-t border-stone-200/50 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-[9px] font-mono text-stone-400">
+              {/* Scrollable Letter Body */}
+              <div className="overflow-y-auto my-2 pr-2.5 max-h-[58vh] space-y-3 flex-1 scrollbar-thin scrollbar-thumb-rose-200 scrollbar-track-transparent">
+                <FormattedLetterContent content={readingLetter.content} className="pl-3.5 border-l-2 border-rose-300 py-1" />
+              </div>
+
+              {/* Fixed Footer */}
+              <div className="shrink-0 mt-3 border-t border-stone-200/50 pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-[9px] font-mono text-stone-400">
                 <span className="flex items-center gap-1">
                   <Clock size={11} /> Escrita em: {new Date(readingLetter.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </span>
